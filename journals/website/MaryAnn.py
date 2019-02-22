@@ -26,7 +26,7 @@ class website:
                 journal_title = bs.find("h1", class_="journal-title").get_text().strip()
 
                 str = json.dumps((journal_title, issn_url))
-                self.nm.seve_website_issn_set(section,str)
+                self.nm.seve_website_journal_set(section,str)
 
 
 

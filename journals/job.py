@@ -37,9 +37,10 @@ class spider(threading.Thread):
             for arg in args:
                 m(self.section,arg)
 
-        for string in self.nm.smembers_wbsite_issn_set(self.section):
+        for string in self.nm.smembers_wbsite_journal_set(self.section):
             s=json.loads(string)
             print(s[0],s[1])
+            print(self.nm.get_journal_config(s[0]))
 
 
 

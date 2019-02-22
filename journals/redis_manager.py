@@ -23,10 +23,10 @@ class name_manager:
 
 
 
-    def seve_website_issn_set(self,website,string):
+    def seve_website_journal_set(self,website,string):
         redis_.sadd(self.create_website_journal_set_name(website),string)
 
-    def smembers_wbsite_issn_set(self,website):
+    def smembers_wbsite_journal_set(self,website):
         return redis_.smembers(self.create_website_journal_set_name(website))
 
     def save_journal_config(self,website,journal_name,method_name):
@@ -38,7 +38,7 @@ class name_manager:
 
 
 if __name__ == '__main__':
-    print(redis_.keys("*"))
+    print(redis_.delete("MaryAnn_issn_set"))
 
 
 
