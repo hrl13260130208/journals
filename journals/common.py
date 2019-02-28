@@ -1,13 +1,138 @@
+import logging
+from journals.redis_manager import name_manager
+import json
 
 
-
-class line:
+logger=logging.getLogger("logger")
+class common_website:
     def __init__(self):
-        self.cell={}
+        self.nm=name_manager()
+        self.list=[]
 
-    def set(self,key,value):
-        self.cell[key]=value
+    def get(self,section,url):
+        '''
+        从所给的url中爬取所有的期刊，要求爬取期刊名称和期刊内卷期列表的url
 
+        :param section:
+        :param url:
+        :return:
+        '''
+        pass
+
+    def run(self,section,url):
+        '''
+        执行get方法，并将list中的数据存到redis中
+
+        当get方法出错时，退出程序
+        :param section:
+        :param url:
+        :return:
+        '''
+        try:
+            logger.info("解析url:"+url+"...")
+            self.get(section,url)
+            logger.info("解析完成！")
+        except:
+            logger.error("网站爬取出错！",exc_info = True)
+            exit(0)
+
+        for item in self.list:
+            self.nm.seve_website_journal_set(section, json.dumps(item))
+
+    def set_list(self,title,url):
+        self.list.append((title,url))
+
+
+class common_journals:
+    def __init__(self):
+        self.nm=name_manager()
+        self.method = []
+
+    def get(self,website,journal,url):
+        pass
+
+    def run(self,website,journal,url,method_j):
+
+        '''
+        执行get方法，将需要采集的期刊信息存储到redis中
+
+        当get方法执行出错时，会执行method中配置的其他方法，当所有方法都执行失败的时候，会将错误信息存储到redis中
+
+        :param website:
+        :param journal:
+        :param url:
+        :return:
+        '''
+        find=False
+        try:
+            logger.info("解析url:"+url)
+            if method_j ==None:
+                self.get(website,journal,url)
+                find=True
+            else:
+                mm = getattr(self, method_j)
+                mm(website, journal, url)
+                find = True
+        except:
+            logger.error("爬取期刊信息出错，尝试其他方法。错误信息：", exc_info=True)
+            for m in self.method:
+                method_m = getattr(self, m)
+                try:
+                    method_m(website,journal,url)
+                except:
+                    continue
+                self.nm.save_journal_config(website,journal,m)
+                find=True
+                break
+        if not find:
+            logger.info("爬取"+journal+"失败!")
+            self.nm.save_journal_error_message(website+"_"+journal+"_"+url)
+
+class common_article:
+    def __init__(self):
+        self.nm = name_manager()
+
+    def run(self,journal,method_j):
+        '''
+        执行first与second方法，爬取文章的具体信息
+
+         当get方法执行出错时，会执行method中配置的其他方法（方法名为journals中配置的方法名+_first(或_second)）
+        :param journal:
+        :param method_j:
+        :return:
+        '''
+        while (True):
+            temp_data = self.nm.get_journal_temp_data(journal)
+            if temp_data == None:
+                break
+            try:
+
+                if method_j == None:
+                    m_first=getattr(self,"first")
+                    m_second=getattr(self,"second")
+                else:
+                    m_first=getattr(self,method_j+"_first")
+                    m_second=getattr(self,method_j+"_second")
+                urls = m_first(temp_data)
+                for url in urls:
+                    try:
+                        m_second(url)
+                    except:
+                        logger.error("爬取文章出错："+url[Row_Name.TEMP_AURL]+" 。错误信息：", exc_info=True)
+                        message = ["second", url]
+                        self.nm.save_article_error_message(json.dumps(message))
+            except:
+                logger.error("爬取文章列表出错。错误信息：", exc_info=True)
+                message = ["first", temp_data]
+                self.nm.save_article_error_message(json.dumps(message))
+
+
+
+    def first(self,temp_data):
+        pass
+
+    def second(self,article_info):
+        pass
 
 
 
@@ -79,6 +204,8 @@ class Row_Name:
     AFF_ADDRESS = "aff_address"
     CONTRIB_ADDRESS = "contrib_address"
     BIO = "bio"
+    TEMP_URL="temp_url"
+    TEMP_AURL="temp_aurl"
     COLUME_NUM={"filename":0,
                 "excelname":1,
                 "serial_number":2,
