@@ -14,13 +14,18 @@ class website(common_website):
 
     def get(self,section,url):
 
-        time.sleep(random.random()*3)
+        time.sleep(random.random()*5+3)
         data = requests.get(url)
         print(data.text)
         soup = BeautifulSoup(data.text, "html.parser")
         ul = soup.find("ul", class_=" rlist search-result__body titles-results ")
+
+        if ul==None:
+            ul=soup.find("ul", class_="rlist search-result__body titles-results")
         num = url.find(".com")
         prefix = url[:num + 4]
+        print("==================",url)
+       
         for li in ul.find_all("li"):
             h4 = li.find("h4")
             issn_url = prefix + h4.find("a")["href"]
@@ -34,7 +39,7 @@ class journals(common_journals):
         journal_common_info=self.get_common(journal,url)
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
-        time.sleep(random.random() * 3)
+        time.sleep(random.random() * 5 + 3)
         data = requests.get(url)
         bs = BeautifulSoup(data.text, "html.parser")
         num = url.find(".com")
@@ -62,7 +67,7 @@ class journals(common_journals):
         common=self.nm.get_journal_common_info(journal)
 
         if common ==None:
-            time.sleep(random.random() * 3)
+            time.sleep(random.random() * 5 + 3)
             data = requests.get(url)
             soup = BeautifulSoup(data.text, "html.parser")
             div = soup.find("div", class_="meta__info")
@@ -88,7 +93,7 @@ class article(common_article):
     def first(self,temp_data):
         urls=[]
         journal_temp = json.loads(temp_data)
-        time.sleep(random.random() * 3)
+        time.sleep(random.random() * 5 + 3)
         data = requests.get(journal_temp[Row_Name.TEMP_URL])
         bs = BeautifulSoup(data.text, "html.parser")
         num = journal_temp[Row_Name.TEMP_URL].find(".com")
@@ -130,7 +135,7 @@ class article(common_article):
 
     def second(self,article_info):
 
-        time.sleep(random.random() * 3)
+        time.sleep(random.random() * 5 + 3)
         data_s = requests.get(article_info[Row_Name.TEMP_AURL])
         bs_c = BeautifulSoup(data_s.text, "html.parser")
 
@@ -162,10 +167,12 @@ class article(common_article):
                 re_s = re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}", string)
                 if re_s != None:
                     article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
-                if string.find("Mary Ann") != -1:
-                    article_info[Row_Name.COPYRIGHT_HOLDER] = "Mary Ann Liebert, Inc"
+                    article_info[Row_Name.COPYRIGHT_HOLDER]=string.replace(string[re_s.span()[0]:re_s.span()[1]],"").replace("©","").replace("Copyright","").strip()
                 else:
-                    article_info[Row_Name.COPYRIGHT_HOLDER]=string.replace("©","").replace("Copyright","").strip()
+                    article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace(string[re_s.span()[0]:re_s.span()[1]],
+                                                                             "").replace("©", "").replace("Copyright",
+                                                                                                          "").strip()
+
 
         self.set_not_none_item(article_info, Row_Name.ABS_URL, data_s.url)
         self.set_not_none_item(article_info, Row_Name.FULLTEXT_URL, data_s.url)
