@@ -95,11 +95,12 @@ class common_article:
             journal_temp = json.loads(temp_data)
             ais=self.do_run(journal_temp)
 
-            for info in ais:
-                self.nm.save_article_data(json.dumps(info))
+            if ais !=None:
+                for info in ais:
+                    self.nm.save_article_data(json.dumps(info))
 
-            self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
-                                           journal_temp[Row_Name.ISSUE])
+                self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
+                                               journal_temp[Row_Name.ISSUE])
 
 
     def do_run(self,journal_temp):
