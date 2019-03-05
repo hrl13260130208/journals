@@ -28,6 +28,7 @@ class website(common_website):
 class journals(common_journals):
 
     def get(self,website,journal,url):
+        print("=============")
         journal_common_info=self.get_common(journal,url)
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
@@ -100,10 +101,10 @@ class journals(common_journals):
 
 class article(common_article):
 
-    def first(self,temp_data):
-        print("==========================")
+    def first(self,journal_temp):
+
         urls=[]
-        journal_temp = json.loads(temp_data)
+        print("_____________________")
         time.sleep(random.random() * 3)
         data = requests.get(journal_temp[Row_Name.TEMP_URL])
         bs = BeautifulSoup(data.text, "html.parser")
@@ -121,21 +122,71 @@ class article(common_article):
                             if b_string.find("Volume") != -1 and b_string.find("Number") != -1:
                                 volume = re.search("\d+", re.search("Vol.+\d+", b_string).group()).group()
                                 no = re.search("\d+", re.search("Number.+\d+", b_string).group()).group()
-                        print(volume,no,"===========",journal_temp[Row_Name.VOLUME],journal_temp[Row_Name.ISSUE])
+
                         if int(volume) == int(journal_temp[Row_Name.VOLUME]) and int(no) == int(journal_temp[Row_Name.ISSUE]):
                             for p in trs[i + 1].find_all("p", class_="sans-12"):
                                 article_info = dict(journal_temp)
                                 a = p.find("a")
+                                if a ==None:
+                                    continue
                                 article_info[Row_Name.TEMP_AURL]=a["href"]
                                 print(article_info)
                                 urls.append(article_info)
 
                             break
-
         return urls
 
+    def back(self,article_info,ais):
+        time.sleep(random.random() * 3)
+        data_s = requests.get(article_info[Row_Name.TEMP_AURL])
+        bs_c = BeautifulSoup(data_s.text, "html.parser")
+
+        div = bs_c.find("div", id="issuesinfo")
+        find = False
+        urls=[]
+        print()
+        for li in div.find_all("li"):
+            if li.find("strong") != None:
+                num = re.search("\d+", re.search("Volume.*\d+", li.get_text()).group()).group()
+                if int(num) ==int( article_info[Row_Name.VOLUME]):
+                    find = True
+                elif find:
+                    break
+            if find:
+                a = li.find("a")
+                if a != None:
+                    issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
+                    if int(issue_num) == int(article_info[Row_Name.ISSUE]):
+                        urls=self.do_back_first("https://www.ingentaconnect.com/" + a["href"],article_info)
+
+        for url in urls:
+            try:
+                ai = self.second(url)
+                ais.append(ai)
+            except:
+                logger.error("爬取文章出错：" + url[Row_Name.TEMP_AURL] + " 。错误信息：", exc_info=True)
+                message = ["second_back", url]
+                self.nm.save_article_error_message(json.dumps(message))
+
+        return self.is_break
+
+
+
+    def do_back_first(self,url,journal_temp):
+        urls=[]
+        data = requests.get(url)
+        bs = BeautifulSoup(data.text, "html.parser")
+        div = bs.find("div", class_="greybg")
+        for div_tag in div.find_all("div", class_="data"):
+            a = div_tag.find("a")
+            article_info = dict(journal_temp)
+            article_info[Row_Name.TEMP_AURL] = "https://www.ingentaconnect.com/"+a["href"]
+            print(article_info)
+            urls.append(article_info)
+        return urls
+
+
     def second(self,article_info):
-        print("______________________")
         time.sleep(random.random() * 3)
         data_s = requests.get(article_info[Row_Name.TEMP_AURL])
         bs_c = BeautifulSoup(data_s.text, "html.parser")
@@ -219,8 +270,7 @@ class article(common_article):
         article_info[Row_Name.PAGEURL] = data_s.url
         article_info[Row_Name.FULLTEXT_URL] = data_s.url
 
-        print(article_info)
-        self.nm.save_article_data(json.dumps(article_info))
+        return article_info
 
     def set_not_none_item(self,a_info,key,value):
         if value == None:
@@ -232,43 +282,83 @@ class article(common_article):
             a_info[key]=value.get_text().strip()
 
 
+def a(b,c,d):
+    b=True
+    c=True
+    d.append("assdf")
 
 if __name__ == '__main__':
-    info={}
-    url="http://www.aspbs.com/jolpe.html"
 
-    data = requests.get(url)
-    bs = BeautifulSoup(data.text, "html.parser")
-    issn_string = ""
-    for s in bs.find_all("span"):
-        string = s.get_text().strip()
-        if string.find("ISSN") != -1 or string.find("EISSN") != -1:
-            issn_string = string
-            break
-    if issn_string == "":
-        for f in bs.find_all("font"):
-            string1 = f.get_text().strip()
-            if string1.find("ISSN") != -1 or string1.find("EISSN") != -1:
-                issn_string = string1
-                break
+    b=False
+    c=False
+    d=[]
+    a(b,c,d)
+    print(b,c,d)
 
-    if issn_string == "":
-        eissn_s =re.search("EISSN: \d{4}-\d{4}", bs.get_text()).group()
-        if eissn_s!=None:
-            issn_string+=eissn_s+";"
-        issn_s =re.search("ISSN: \d{4}-\d{4}", bs.get_text()).group()
-        if issn_s!=None:
-            issn_string+=issn_s+";"
+    # info={}
+    # url="https://www.ingentaconnect.com//content/asp/jbmb/2018/00000012/00000005"
 
-    print(issn_string)
-    if issn_string != "":
-        iss = issn_string.split(";")
-        for issn in iss:
-            if issn.find("EISSN:") != -1:
-                info[Row_Name.EISSN] = re.search("\d{4}-\d{4}", issn).group()
-            elif issn.find("ISSN:") != -1:
-                info[Row_Name.ISSN] = re.search("\d{4}-\d{4}", issn).group()
-    print(info)
+    # data = requests.get(url)
+    # bs = BeautifulSoup(data.text, "html.parser")
+    # div=bs.find("div",class_="greybg")
+    # for div_tag in div.find_all("div",class_="data"):
+    #     a =div_tag.find("a")
+    #     article_info = dict(journal_temp)
+    #     a = p.find("a")
+    #     article_info[Row_Name.TEMP_AURL] = a["href"]
+    #     print(article_info)
+    #     urls.append(article_info)
+
+
+
+
+
+    # div=bs.find("div",id="issuesinfo")
+    # find=False
+    # for li in div.find_all("li"):
+    #     if li.find("strong")!=None:
+    #         num=re.search("\d+",re.search("Volume.*\d+",li.get_text()).group()).group()
+    #         if int(num) ==12:#article_info[Row_Name.VOLUME]:
+    #             find=True
+    #         elif find:
+    #             break
+    #     if find:
+    #         a=li.find("a")
+    #         if a!=None:
+    #             issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
+    #             if int(issue_num)==5:#article_info[Row_Name.ISSUE]
+    #                 print("https://www.ingentaconnect.com/"+a["href"])
+    # print(info)
+
+    # for s in bs.find_all("span"):
+#     string = s.get_text().strip()
+#     if string.find("ISSN") != -1 or string.find("EISSN") != -1:
+#         issn_string = string
+#         break
+# if issn_string == "":
+#     for f in bs.find_all("font"):
+#         string1 = f.get_text().strip()
+#         if string1.find("ISSN") != -1 or string1.find("EISSN") != -1:
+#             issn_string = string1
+#             break
+#
+# if issn_string == "":
+#     eissn_s =re.search("EISSN: \d{4}-\d{4}", bs.get_text()).group()
+#     if eissn_s!=None:
+#         issn_string+=eissn_s+";"
+#     issn_s =re.search("ISSN: \d{4}-\d{4}", bs.get_text()).group()
+#     if issn_s!=None:
+#         issn_string+=issn_s+";"
+#
+# print(issn_string)
+# if issn_string != "":
+#     iss = issn_string.split(";")
+#     for issn in iss:
+#         if issn.find("EISSN:") != -1:
+#             info[Row_Name.EISSN] = re.search("\d{4}-\d{4}", issn).group()
+#         elif issn.find("ISSN:") != -1:
+#             info[Row_Name.ISSN] = re.search("\d{4}-\d{4}", issn).group()
+
     # data = requests.get(url)
     # bs_c = BeautifulSoup(data.text, "html.parser")
     # article_info={}

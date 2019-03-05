@@ -51,7 +51,7 @@ class common_journals:
     def get(self,website,journal,url):
         pass
 
-    def run(self,website,journal,url,method_j):
+    def run(self,website,journal,url):
 
         '''
         执行get方法，将需要采集的期刊信息存储到redis中
@@ -63,36 +63,23 @@ class common_journals:
         :param url:
         :return:
         '''
-        find=False
+
         try:
             logger.info("解析url:"+url)
-            if method_j ==None:
-                self.get(website,journal,url)
-                find=True
-            else:
-                mm = getattr(self, method_j)
-                mm(website, journal, url)
-                find = True
+            self.get(website,journal,url)
         except:
-            logger.error("爬取期刊信息出错，尝试其他方法。错误信息：", exc_info=True)
-            for m in self.method:
-                method_m = getattr(self, m)
-                try:
-                    method_m(website,journal,url)
-                except:
-                    continue
-                self.nm.save_journal_config(website,journal,m)
-                find=True
-                break
-        if not find:
             logger.info("爬取"+journal+"失败!")
             self.nm.save_journal_error_message(website+"_"+journal+"_"+url)
+
+
 
 class common_article:
     def __init__(self):
         self.nm = name_manager()
+        self.is_break="break"
+        self.is_contiune="continue"
 
-    def run(self,journal,method_j):
+    def run(self,journal):
         '''
         执行first与second方法，爬取文章的具体信息
 
@@ -105,28 +92,47 @@ class common_article:
             temp_data = self.nm.get_journal_temp_data(journal)
             if temp_data == None:
                 break
-            try:
+            journal_temp = json.loads(temp_data)
+            ais=self.do_run(journal_temp)
 
-                if method_j == None:
-                    m_first=getattr(self,"first")
-                    m_second=getattr(self,"second")
-                else:
-                    m_first=getattr(self,method_j+"_first")
-                    m_second=getattr(self,method_j+"_second")
-                urls = m_first(temp_data)
-                for url in urls:
+            for info in ais:
+                self.nm.save_article_data(json.dumps(info))
+
+            self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
+                                           journal_temp[Row_Name.ISSUE])
+
+
+    def do_run(self,journal_temp):
+        ais = []
+        len=-1
+        try:
+            m_first = getattr(self, "first")
+            m_second = getattr(self, "second")
+            urls = m_first(journal_temp)
+            len=urls.__len__()
+            for url in urls:
+                try:
+                    ai = m_second(url)
+                    ais.append(ai)
+                except:
+                    logger.error("爬取文章出错：" + url[Row_Name.TEMP_AURL] + " 。错误信息：", exc_info=True)
+
                     try:
-                        m_second(url)
+                        result=self.back(url,ais)
                     except:
-                        logger.error("爬取文章出错："+url[Row_Name.TEMP_AURL]+" 。错误信息：", exc_info=True)
-                        message = ["second", url]
-                        self.nm.save_article_error_message(json.dumps(message))
-            except:
-                logger.error("爬取文章列表出错。错误信息：", exc_info=True)
-                message = ["first", temp_data]
-                self.nm.save_article_error_message(json.dumps(message))
-
-
+                        pass
+                    if result==self.is_break:
+                        break
+                    if result==self.is_contiune:
+                        continue
+                    message = ["second", json.dumps(url)]
+                    self.nm.save_article_error_message(json.dumps(message))
+        except:
+            logger.error("爬取文章列表出错。错误信息：", exc_info=True)
+            message = ["first", json.dumps(journal_temp)]
+            self.nm.save_article_error_message(json.dumps(message))
+        if len!=-1 and len==ais.__len__():
+            return ais
 
     def first(self,temp_data):
         pass
@@ -134,6 +140,8 @@ class common_article:
     def second(self,article_info):
         pass
 
+    def back(self,article_info,ais):
+        pass
 
 
 class Row_Name:

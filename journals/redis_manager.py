@@ -1,5 +1,6 @@
 
 import redis
+import json
 
 
 
@@ -21,21 +22,9 @@ class name_manager:
         '''
         return website+"_journals_set"
 
-    def create_journal_config_name(self,journal_name):
-        '''
-        创建获取期刊信息的方法名的sting的名称（针对期刊）
-        :param journal_name:
-        :return:
-        '''
-        return  journal_name+"_method_name"
 
-    def create_website_journal_config_set_name(self,website):
-        '''
-        创建获取期刊信息的方法名的set的名称（针对网站）
-        :param website:
-        :return:
-        '''
-        return website+ "_method_set"
+
+
 
     def create_journal_common_info_name(self,journal):
         '''
@@ -86,19 +75,9 @@ class name_manager:
     def smembers_wbsite_journal_set(self,website):
         return redis_.smembers(self.create_website_journal_set_name(website))
 
-    def save_journal_config(self,website,journal_name,method_name):
-        '''
-        存储获取期刊信息的方法名
-        :param website:
-        :param journal_name:
-        :param method_name:
-        :return:
-        '''
-        redis_.sadd(self.create_website_journal_config_set_name(website),method_name)
-        redis_.set(self.create_journal_config_name(journal_name),method_name)
 
-    def get_journal_config(self,journal_name):
-        return redis_.get(self.create_journal_config_name(journal_name))
+
+
 
 
     def save_journal_common_info(self,journal,info):
@@ -113,7 +92,7 @@ class name_manager:
     def get_journal_common_info(self,journal):
         return redis_.get(self.create_journal_common_info_name(journal))
 
-    def seve_download_schedule(self, journal, volume, issue):
+    def save_download_schedule(self, journal, volume, issue):
         '''
         存储下载进度,向set中存储数据存储成功则为增量
         :param journal:
@@ -123,8 +102,8 @@ class name_manager:
         '''
         return  redis_.sadd(self.create_download_schedule_name(journal), volume + "_" + issue)
 
-    def get_download_schedule(self, journal):
-        return redis_.get(self.create_download_schedule_name(journal))
+    def smembers_journal_download_schedule(self, journal):
+        return redis_.smembers(self.create_download_schedule_name(journal))
 
     def save_journal_temp_data(self,journal,data):
         redis_.lpush(self.create_journal_temp_data_name(journal),data)
@@ -144,9 +123,10 @@ class name_manager:
         p_year=2018
 
         if int(year)>=p_year:
-            num=self.seve_download_schedule(journal,volume,issue)
-            return num ==1
-        return False
+            return not redis_.sismember(self.create_download_schedule_name(journal), volume + "_" + issue)
+        #     num=self.seve_download_schedule(journal,volume,issue)
+        #     return num ==1
+        # return False
 
     def save_article_data(self,data):
         redis_.lpush(self.create_article_data_name(),data)
@@ -167,9 +147,23 @@ class name_manager:
         return redis_.lpop(self.create_article_error_message_name())
 
 
+def website_info(website):
+    nm=name_manager()
+    for journal in nm.smembers_wbsite_journal_set(website):
+        journal=json.loads(journal)
+        print("期刊名称："+journal[0])
+        print("url:",journal[1])
+        print("已下载卷期：",nm.smembers_journal_download_schedule(journal[0]))
+    # print(redis_.sismember(nm.create_download_schedule_name("Journal of Nanoscience and            Nanotechnology"),"19_1"))
 
 
-
+def delte_website(website):
+    nm = name_manager()
+    for journal in nm.smembers_wbsite_journal_set(website):
+        journal = json.loads(journal)
+        for i in redis_.keys(journal[0]+"*"):
+            redis_.delete(i)
+    redis_.delete(nm.create_website_journal_set_name(website))
 
 if __name__ == '__main__':
     for key in redis_.keys("*"):
@@ -181,5 +175,8 @@ if __name__ == '__main__':
             print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
         elif redis_.type(key) =="list":
             print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+    # delte_website("future")
+
+    # website_info("aspbs")
 
 

@@ -52,9 +52,9 @@ class spider(threading.Thread):
             pyfile = __import__("journals.website." + self.section, fromlist=True)
             c = getattr(pyfile, "journals")
             c_instance=c()
-            method_j = self.nm.get_journal_config(s[0])
+
             m = getattr(c_instance, "run")
-            m(self.section, s[0],s[1],method_j)
+            m(self.section, s[0],s[1])
 
 
             logger.info("爬取 "+s[0]+" 文章级别的信息...")
@@ -62,7 +62,7 @@ class spider(threading.Thread):
             ca = getattr(pyfile, "article")
             ca_instance=ca()
             m = getattr(ca_instance, "run")
-            m( s[0],method_j)
+            m( s[0])
 
 class jobs:
     def __init__(self):
@@ -113,15 +113,52 @@ class jobs:
             section=message[1][Row_Name.PUBLISHER]
 
 
+def run_error_test(file,url):
+    file=open(file)
+    for line in file.readlines():
+        if line.find(url)!=-1:
+            list=json.loads(line)
+            print(type(list[1])=="str")
+            if type(list[1])=="str":
+                dict = json.loads(list[1])
+            else:
+                dict=list[1]
+            if list[0] =="first":
+                if dict[Row_Name.TEMP_URL] == url:
+                    pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
+                    ac=getattr(pyfile,"article")
+
+                    do_run = getattr(ac(), "do_run")
+                    print(do_run(json.loads(list[1])))
+                    break
+            elif list[0] =="second":
+                if list[0] == "second":
+                    if dict[Row_Name.TEMP_AURL] == url:
+                        pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
+                        ac = getattr(pyfile, "article")
+
+                        m_second= getattr(ac(), "second")####
+
+                        m_second(dict)
+
+                        break
+
+
+
+
+
 
 
 
 
 if __name__ == '__main__':
-   job=jobs()
-   job.run_single_website("aspbs")
+    job=jobs()
+    job.run_single_website("aspbs")
    # excel_rw.create_and_save_execel("aspbs")
 
+    # path="C:/execl/20190305/article.txt"
+    # url="http://openurl.ingenta.com/content?genre=article&issn=1941-4900&volume=10&issue=5/6&spage=603&epage=605"
+    # run_error_test(path,url)
     # config=configs()
     # for section in config.read_sections():
     #    excel_rw.create_and_save_execel(section)
