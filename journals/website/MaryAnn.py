@@ -212,7 +212,7 @@ class article(common_article):
                 af_string += "$$##"
             else:
                 af_string += af[:-1] + "##"
-                hasaf = True
+                has_af = True
 
             if aa == "":
                 aa_string += "$$##"

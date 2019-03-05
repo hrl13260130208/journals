@@ -16,6 +16,7 @@ class website(common_website):
 
         time.sleep(random.random()*5+3)
         data = requests.get(url)
+        print(data.text)
         soup = BeautifulSoup(data.text, "html.parser")
         ul = soup.find("ul", class_=" rlist search-result__body titles-results ")
 
