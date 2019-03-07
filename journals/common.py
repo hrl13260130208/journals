@@ -66,7 +66,8 @@ class common_journals:
 
         try:
             logger.info("解析url:"+url)
-            self.get(website,journal,url)
+            if not self.nm.is_discontinue_journal(url):
+                self.get(website,journal,url)
         except:
             logger.info("爬取"+journal+"失败!")
             self.nm.save_journal_error_message(website+"_"+journal+"_"+url)
@@ -109,10 +110,12 @@ class common_article:
         try:
             m_first = getattr(self, "first")
             m_second = getattr(self, "second")
+            logger.info("爬取"+journal_temp[Row_Name.JOURNAL_TITLE]+"文章列表："+journal_temp[Row_Name.TEMP_URL])
             urls = m_first(journal_temp)
             len=urls.__len__()
             for url in urls:
                 try:
+                    logger.info("爬取"+journal_temp[Row_Name.JOURNAL_TITLE]+"具体文章："+url[Row_Name.TEMP_AURL])
                     ai = m_second(url)
                     ais.append(ai)
                 except:

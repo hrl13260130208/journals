@@ -102,29 +102,32 @@ if __name__ == '__main__':
     # wb.save(EXECEL_PATH+"ts.xlsx")
     execl=openpyxl.load_workbook("C:/execl/wc_hrl_MaryAnn_20190228_1_20190228.xlsx")
     sheet=execl.get_sheet_by_name("sheet1")
+    # print(sheet.cell(3,Row_Name.COLUME_NUM[Row_Name.AFFILIATION]+1).value)
+
     for i in sheet.rows:
-        pt=i[Row_Name.COLUME_NUM[Row_Name.PAGE_TOTAL]].value
-        if pt ==None:
-            sp=i[Row_Name.COLUME_NUM[Row_Name.START_PAGE]].value
-            ep=i[Row_Name.COLUME_NUM[Row_Name.END_PAGE]].value
+        pt=i[Row_Name.COLUME_NUM[Row_Name.AFFILIATION]].value
+        print(pt)
+    #     if pt ==None:
+    #         sp=i[Row_Name.COLUME_NUM[Row_Name.START_PAGE]].value
+    #         ep=i[Row_Name.COLUME_NUM[Row_Name.END_PAGE]].value
+    #
+    #         num_0 = re.search("\d+", str(sp))
+    #         num_1 = re.search("\d+", str(ep))
+    #         try:
+    #             num_2 = int(ep[num_1.span()[0]:num_1.span()[1]]) - int(
+    #                 sp[num_0.span()[0]:num_0.span()[1]]) + 1
+    #             if num_2 > 0:
+    #                 i[Row_Name.COLUME_NUM[Row_Name.PAGE_TOTAL]].value = num_2
+    #         except:
+    #             pass
+    #
+    #     ch=i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_HOLDER]].value
+    #
+    #     if ch==None:
+    #         cs=i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_STATEMENT]].value
+    #         i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_HOLDER]].value=str(cs).replace("©","").replace("Copyright","").strip()
 
-            num_0 = re.search("\d+", str(sp))
-            num_1 = re.search("\d+", str(ep))
-            try:
-                num_2 = int(ep[num_1.span()[0]:num_1.span()[1]]) - int(
-                    sp[num_0.span()[0]:num_0.span()[1]]) + 1
-                if num_2 > 0:
-                    i[Row_Name.COLUME_NUM[Row_Name.PAGE_TOTAL]].value = num_2
-            except:
-                pass
-
-        ch=i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_HOLDER]].value
-
-        if ch==None:
-            cs=i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_STATEMENT]].value
-            i[Row_Name.COLUME_NUM[Row_Name.COPYRIGHT_HOLDER]].value=str(cs).replace("©","").replace("Copyright","").strip()
-
-    execl.save("C:/execl/wc_hrl_MaryAnn_20190228_2_20190304.xlsx")
+    # execl.save("C:/execl/wc_hrl_MaryAnn_20190228_1_20190208.xlsx")
 
 
 

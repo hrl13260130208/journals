@@ -20,7 +20,10 @@ class website(common_website):
         td = soup.find("td", width="155")
         div = td.find("div")
         for a in div.find_all("a"):
-            url = "http://www.aspbs.com/" + a["href"]
+            if a["href"].find("http")!=-1:
+                url=a["href"]
+            else:
+                url = "http://www.aspbs.com/" + a["href"]
             title = a.get_text().strip().replace("\n", " ").replace("\r", " ")
 
             self.set_list(title, url)
@@ -33,8 +36,19 @@ class journals(common_journals):
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
         time.sleep(random.random() * 3)
+        # cookie={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        #         "Accept-Encoding":"gzip, deflate",
+        #         "Accept-Language": "zh-CN,zh;q=0.9",
+        #         "Cache-Control":" max-age=0",
+        #         "Connection":" keep-alive",
+        #         "Host": "www.aspbs.com",
+        #         "If-Modified-Since":"Tue, 29 Jan 2019 13:24:00 GMT",
+        #
+        #         "Upgrade-Insecure-Requests": "1",
+        #         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"}
         data = requests.get(url)
         bs = BeautifulSoup(data.text, "html.parser")
+        # print(bs)
         for a in bs.find_all("a"):
             a_string = a.get_text().strip().replace("\n", " ").replace("\r", " ")
             # print(a_string)
@@ -47,6 +61,7 @@ class journals(common_journals):
                 issue_info[Row_Name.YEAR]=cdate[-4:]
                 issue_info[Row_Name.TEMP_URL] = "http://www.aspbs.com/" + a["href"]
 
+                # print(issue_info)
                 if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
                     self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
@@ -55,11 +70,14 @@ class journals(common_journals):
         common=self.nm.get_journal_common_info(journal)
 
         if common ==None:
+            # print(url)
             data = requests.get(url)
             bs = BeautifulSoup(data.text, "html.parser")
             issn_string = ""
+            # print(bs)
             for s in bs.find_all("span"):
                 string = s.get_text().strip()
+                # print(string)
                 if string.find("ISSN") != -1 or string.find("EISSN") != -1:
                     issn_string = string
                     break
@@ -130,7 +148,7 @@ class article(common_article):
                                 if a ==None:
                                     continue
                                 article_info[Row_Name.TEMP_AURL]=a["href"]
-                                print(article_info)
+                                # print(article_info)
                                 urls.append(article_info)
 
                             break
@@ -144,7 +162,6 @@ class article(common_article):
         div = bs_c.find("div", id="issuesinfo")
         find = False
         urls=[]
-        print()
         for li in div.find_all("li"):
             if li.find("strong") != None:
                 num = re.search("\d+", re.search("Volume.*\d+", li.get_text()).group()).group()
@@ -212,7 +229,8 @@ class article(common_article):
                     i += 1
 
         doi = bs_c.find("meta", {"name": "DC.identifier"})
-        article_info[Row_Name.DOI] = doi["content"][9:]
+        if doi !=None:
+            article_info[Row_Name.DOI] = doi["content"][9:]
 
         article_title = bs_c.find("meta", {"name": "DC.title"})
         article_info[Row_Name.TITLE] = article_title["content"]
@@ -245,10 +263,13 @@ class article(common_article):
                             name = name[:num.start()]
                             af_aa = author_aff[int(num.group())]
                             ps = af_aa.split(",")
-                            for i in range(ps.__len__() - 2):
-                                af += ps[i] + ","
-                            af += af[:-1] + ";"
-                            aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
+                            if ps.__len__()>2:
+                                for i in range(ps.__len__() - 2):
+                                    af += ps[i] + ","
+                                af += af[:-1] + ";"
+                                aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
+                            else:
+                                af += af_aa
 
                         if af == "":
                             af_string += "$$##"
@@ -257,7 +278,7 @@ class article(common_article):
                         if aa == "":
                             aa_string += "$$##"
                         else:
-                            aa_string += af[:-1] + "##"
+                            aa_string += aa[:-1] + "##"
 
                         an_string += name.replace("\xa0", "") + "##"
 
@@ -288,319 +309,96 @@ def a(b,c,d):
     d.append("assdf")
 
 if __name__ == '__main__':
+    article_info={}
+    url="https://www.ingentaconnect.com/content/asp/jnn/2018/00000018/00000009/art00001%3bjsessionid=ercamjqd1dcaj.x-ic-live-01"
 
-    b=False
-    c=False
-    d=[]
-    a(b,c,d)
-    print(b,c,d)
+    data_s = requests.get(url)
+    bs_c = BeautifulSoup(data_s.text, "html.parser")
 
-    # info={}
-    # url="https://www.ingentaconnect.com//content/asp/jbmb/2018/00000012/00000005"
+    div_1 = bs_c.find("div", {"id": "Info"})
+    author_aff = {}
+    an_string = ""
+    af_string = ""
+    aa_string = ""
+    has_af = False
+    for p in div_1.find_all("p"):
+        string_p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+        if string_p.find("Keywords:") != -1:
+            article_info[Row_Name.KEYWORD] = string_p.split(":")[1].replace(";", "##")
+        elif string_p.find("Document Type:") != -1:
+            article_info[Row_Name.ARTICLE_TYPE] = string_p.split(":")[1]
+        elif string_p.find("Publication date:") != -1:
+            article_info[Row_Name.STRING_PUB_DATE] = string_p.split(":")[1]
+        elif string_p.find("Affiliations:") != -1:
+            i = 1
+            for span in p.find_all("span"):
+                author_aff[i] = span.get_text()
+                i += 1
 
-    # data = requests.get(url)
-    # bs = BeautifulSoup(data.text, "html.parser")
-    # div=bs.find("div",class_="greybg")
-    # for div_tag in div.find_all("div",class_="data"):
-    #     a =div_tag.find("a")
-    #     article_info = dict(journal_temp)
-    #     a = p.find("a")
-    #     article_info[Row_Name.TEMP_AURL] = a["href"]
-    #     print(article_info)
-    #     urls.append(article_info)
+    doi = bs_c.find("meta", {"name": "DC.identifier"})
+    if doi != None:
+        article_info[Row_Name.DOI] = doi["content"][9:]
 
+    article_title = bs_c.find("meta", {"name": "DC.title"})
+    article_info[Row_Name.TITLE] = article_title["content"]
 
+    lang = bs_c.find("html")
+    article_info[Row_Name.LANGUAGE] = lang["lang"]
 
+    abs = bs_c.find("div", id="Abst")
+    article_info[Row_Name.ABSTRACT] = abs.get_text().strip().replace("\n", " ").replace("\r", " ")
 
+    for div_2 in bs_c.find_all("div", class_="supMetaData"):
+        for p1 in div_2.find_all("p"):
 
-    # div=bs.find("div",id="issuesinfo")
-    # find=False
-    # for li in div.find_all("li"):
-    #     if li.find("strong")!=None:
-    #         num=re.search("\d+",re.search("Volume.*\d+",li.get_text()).group()).group()
-    #         if int(num) ==12:#article_info[Row_Name.VOLUME]:
-    #             find=True
-    #         elif find:
-    #             break
-    #     if find:
-    #         a=li.find("a")
-    #         if a!=None:
-    #             issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
-    #             if int(issue_num)==5:#article_info[Row_Name.ISSUE]
-    #                 print("https://www.ingentaconnect.com/"+a["href"])
-    # print(info)
+            if p1.get_text().find("Source:") != -1:
+                page = p1.find("span", class_="pagesNum").get_text()
+                article_info[Row_Name.START_PAGE] = re.search("\d+-", page).group()[:-1]
+                article_info[Row_Name.END_PAGE] = re.search("-\d+", page).group()[1:]
+                article_info[Row_Name.PAGE_TOTAL] = re.search("\(\d+\)", page).group()[1:-1]
 
-    # for s in bs.find_all("span"):
-#     string = s.get_text().strip()
-#     if string.find("ISSN") != -1 or string.find("EISSN") != -1:
-#         issn_string = string
-#         break
-# if issn_string == "":
-#     for f in bs.find_all("font"):
-#         string1 = f.get_text().strip()
-#         if string1.find("ISSN") != -1 or string1.find("EISSN") != -1:
-#             issn_string = string1
-#             break
-#
-# if issn_string == "":
-#     eissn_s =re.search("EISSN: \d{4}-\d{4}", bs.get_text()).group()
-#     if eissn_s!=None:
-#         issn_string+=eissn_s+";"
-#     issn_s =re.search("ISSN: \d{4}-\d{4}", bs.get_text()).group()
-#     if issn_s!=None:
-#         issn_string+=issn_s+";"
-#
-# print(issn_string)
-# if issn_string != "":
-#     iss = issn_string.split(";")
-#     for issn in iss:
-#         if issn.find("EISSN:") != -1:
-#             info[Row_Name.EISSN] = re.search("\d{4}-\d{4}", issn).group()
-#         elif issn.find("ISSN:") != -1:
-#             info[Row_Name.ISSN] = re.search("\d{4}-\d{4}", issn).group()
+            elif p1.get_text().find("Authors:") != -1:
 
-    # data = requests.get(url)
-    # bs_c = BeautifulSoup(data.text, "html.parser")
-    # article_info={}
-    # print(bs_c)
-    #
-    # div_1=bs_c.find("div",{"id":"Info"})
-    # author_aff={}
-    # an_string = ""
-    # af_string = ""
-    # aa_string = ""
-    # has_af=False
-    # for p in div_1.find_all("p"):
-    #     string_p=p.get_text().strip().replace("\n", " ").replace("\r", " ")
-    #     if string_p.find("Keywords:")!=-1:
-    #         article_info[Row_Name.KEYWORD]=string_p.split(":")[1].replace(";","##")
-    #     elif string_p.find("Document Type:")!=-1:
-    #         article_info[Row_Name.ARTICLE_TYPE]=string_p.split(":")[1]
-    #     elif string_p.find("Publication date:")!=-1:
-    #         article_info[Row_Name.STRING_PUB_DATE]=string_p.split(":")[1]
-    #     elif string_p.find("Affiliations:")!=-1:
-    #         i=1
-    #         for span in p.find_all("span"):
-    #             author_aff[i]=span.get_text()
-    #             i+=1
-    #
-    #
-    # doi=bs_c.find("meta",{"name":"DC.identifier"})
-    # article_info[Row_Name.DOI]=doi["content"][9:]
-    #
-    # article_title = bs_c.find("meta", {"name": "DC.title"})
-    # article_info[Row_Name.TITLE]=article_title["content"]
-    #
-    # lang=bs_c.find("html")
-    # article_info[Row_Name.LANGUAGE]=lang["lang"]
-    #
-    # abs=bs_c.find("div",id="Abst")
-    # article_info[Row_Name.ABSTRACT]=abs.get_text().strip().replace("\n", " ").replace("\r", " ")
-    #
-    # for div_2 in bs_c.find_all("div",class_="supMetaData"):
-    #     for p1 in div_2.find_all("p"):
-    #
-    #         if p1.get_text().find("Source:")!=-1:
-    #             page=p1.find("span",class_="pagesNum").get_text()
-    #             article_info[Row_Name.START_PAGE]=re.search("\d+-",page).group()[:-1]
-    #             article_info[Row_Name.END_PAGE]=re.search("-\d+",page).group()[1:]
-    #             article_info[Row_Name.PAGE_TOTAL]=re.search("\(\d+\)",page).group()[1:-1]
-    #
-    #         elif p1.get_text().find("Authors:")!=-1:
-    #
-    #
-    #             [s.extract() for s in p1.find_all("strong")]
-    #             for name in p1.get_text().split(";"):
-    #                 num=re.search("\d+",name)
-    #                 af=""
-    #                 aa=""
-    #
-    #                 if num !=None:
-    #                     has_af=True
-    #                     name = name[:num.start()]
-    #                     af_aa=author_aff[int(num.group())]
-    #                     ps = af_aa.split(",")
-    #                     for i in range(ps.__len__() - 2):
-    #                         af += ps[i] + ","
-    #                     af += af[:-1] + ";"
-    #                     aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
-    #
-    #                 if af == "":
-    #                     af_string += "$$##"
-    #                 else:
-    #                     af_string += af[:-1] + "##"
-    #                 if aa == "":
-    #                     aa_string += "$$##"
-    #                 else:
-    #                     aa_string += af[:-1] + "##"
-    #
-    #                 an_string += name.replace("\xa0", "")+"##"
-    #
-    # article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
-    # if has_af:
-    #     article_info[Row_Name.AFFILIATION] = af_string[:-2]
-    #     article_info[Row_Name.AFF_ADDRESS] = aa_string[:-2]
-    #
-    # article_info[Row_Name.ABS_URL]=data.url
-    # article_info[Row_Name.PAGEURL]=data.url
-    # article_info[Row_Name.FULLTEXT_URL]=data.url
-    #
-    #
-    #
-    # print(article_info)
+                [s.extract() for s in p1.find_all("strong")]
+                for name in p1.get_text().split(";"):
+                    num = re.search("\d+", name)
+                    af = ""
+                    aa = ""
 
+                    if num != None:
+                        has_af = True
+                        name = name[:num.start()]
+                        af_aa = author_aff[int(num.group())]
+                        print(af_aa)
+                        ps = af_aa.split(",")
+                        print(ps.__len__())
+                        if ps.__len__() > 2:
+                            for i in range(ps.__len__() - 2):
+                                af += ps[i] + ","
+                            af += af[:-1] + ";"
+                            aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
+                        else:
+                            af += af_aa
 
+                    if af == "":
+                        af_string += "$$##"
+                    else:
+                        af_string += af[:-1] + "##"
+                    if aa == "":
+                        aa_string += "$$##"
+                    else:
+                        aa_string += aa[:-1] + "##"
 
+                    an_string += name.replace("\xa0", "") + "##"
 
+    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    if has_af:
+        article_info[Row_Name.AFFILIATION] = af_string[:-2]
+        article_info[Row_Name.AFF_ADDRESS] = aa_string[:-2]
 
-    # string="Volume 2, No. 5 (Oct. 2002)"
-    # print(re.search("\d+",re.search("Volume \d+",string).group()).group())
-    # print(re.search("\d+",re.search("No. \d+",string).group()).group())
-    # print(re.search("\(.+\d{4}\)",string).group()[1:-1])
+    article_info[Row_Name.ABS_URL] = data_s.url
+    article_info[Row_Name.PAGEURL] = data_s.url
+    article_info[Row_Name.FULLTEXT_URL] = data_s.url
+    print(article_info)
 
-
-
-
-    # url="http://www.aspbs.com/bottom.htm"
-    # time.sleep(random.random() * 3)
-    # data = requests.get(url)
-    # soup = BeautifulSoup(data.text, "html.parser")
-    # td=soup.find("td",width="155")
-    # div=td.find("div")
-    # for a in div.find_all("a"):
-    #     url="http://www.aspbs.com/"+a["href"]
-
-        # title=a.get_text().strip().replace("\n"," ").replace("\r"," "))
-
-            # print(a.get_text().strip().replace("\n"," ").replace("\r"," "))
-
-
-
-#
-#
-
-#
-#     def get(self,journal):
-#         while(True):
-#             temp_data=self.nm.get_journal_temp_data(journal)
-#             if temp_data ==None:
-#                 break
-#             journal_temp=json.loads(temp_data)
-#             time.sleep(random.random() * 3)
-#             data = requests.get(journal_temp[Row_Name.TEMP_URL])
-#             bs = BeautifulSoup(data.text, "html.parser")
-#
-#
-#             div = bs.find("div", class_="table-of-content")
-#             for i in div.find_all("div", class_="issue-item"):
-#                 article_info = dict(journal_temp)
-#                 # i=div.find("div",class_="issue-item")
-#                 title = i.find("h5")
-#                 article_url = title.find("a")["href"]
-#
-#                 time.sleep(random.random() * 3)
-#                 data_s = requests.get("https://www.liebertpub.com" + article_url)
-#                 bs_c = BeautifulSoup(data_s.text, "html.parser")
-#
-#                 article_type = bs_c.find("meta", {"name": "dc.Type"})
-#                 self.set_not_none_item(article_info,Row_Name.ARTICLE_TYPE,article_type["content"])
-#
-#                 article_doi = bs_c.find("meta", {"scheme": "doi"})
-#                 self.set_not_none_item(article_info,Row_Name.DOI,article_doi["content"])
-#
-#                 article_title = bs_c.find("meta", {"name": "dc.Title"})
-#                 self.set_not_none_item(article_info,Row_Name.TITLE,article_title["content"])
-#
-#                 article_language = bs_c.find("meta", {"name": "dc.Language"})
-#                 self.set_not_none_item(article_info,Row_Name.LANGUAGE, article_language["content"])
-#
-#                 article_abstract = bs_c.find("div", class_="abstractSection abstractInFull")
-#                 self.set_possible_none_item(article_info,Row_Name.ABSTRACT,article_abstract)
-#
-#                 article_keyword= bs_c.find("meta", {"name": "keywords"})
-#                 # self.set_possible_none_item(article_info,Row_Name.KEYWORD,article_keyword["content"].replace(",","##"))
-#                 if article_keyword!=None:
-#                     article_info[Row_Name.KEYWORD]= article_keyword["content"].replace(",", "##")
-#
-#                 article_start_page=i.find("ul",class_="rlist--inline separator toc-item__detail")
-#                 for li in article_start_page.find_all("li"):
-#                     if li.get_text().find("Pages:")!=-1:
-#                         [s.extract() for s in li.find("span")]
-#                         strs =li.get_text().split("–")
-#                         try:
-#                             article_info[Row_Name.START_PAGE]=int(strs[0])
-#                             article_info[Row_Name.END_PAGE]=int(strs[1])
-#                             article_info[Row_Name.PAGE_TOTAL]=article_info[Row_Name.END_PAGE]-article_info[Row_Name.START_PAGE]+1
-#                         except:
-#                             pass
-#
-#                     elif li.get_text().find("Published Online:")!=-1:
-#                         [s.extract() for s in li.find("span")]
-#                         self.set_possible_none_item(article_info,Row_Name.STRING_PUB_DATE,li)
-#
-#                 for section in bs_c.find_all("section",class_="section"):
-#                     if section.find("strong").get_text()=="Information":
-#                         string=section.find("div").get_text().strip()
-#                         article_info[Row_Name.COPYRIGHT_STATEMENT]=string
-#                         re_s=re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}",string)
-#                         if re_s!= None:
-#                             article_info[Row_Name.COPYRIGHT_YEAR]=string[re_s.span()[0]:re_s.span()[1]]
-#                         if string.find("Mary Ann")!=-1:
-#                             article_info[Row_Name.COPYRIGHT_HOLDER]="Mary Ann Liebert, Inc"
-#
-#                 self.set_not_none_item(article_info,Row_Name.ABS_URL,data_s.url)
-#                 self.set_not_none_item(article_info,Row_Name.FULLTEXT_URL,data_s.url)
-#
-#
-#                 an_string=""
-#                 em_string=""
-#                 af_string=""
-#                 aa_string=""
-#                 co_string=""
-#                 has_em = False
-#                 div_a=bs_c.find("div",class_="accordion-tabbed loa-accordion")
-#                 for div_tag in div_a.find_all("div",{"class":"accordion-tabbed__tab-mobile accordion__closed "})\
-#                                +div_a.find_all("div",{"class":"accordion-tabbed__tab-mobile "}):
-#                     a = div_tag.find("a", href="#")
-#                     an_string += a["title"].strip() + "##"
-#                     div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
-#                     [s.extract() for s in div_s.find("div",class_="bottom-info")]
-#                     af = ""
-#                     aa = ""
-#                     em = "$$"
-#
-#                     for p in div_s.find_all("p"):
-#                         p = p.get_text().strip().replace("\n", " ").replace("\r"," ")
-#                         if p.find("Address correspondence to:") != -1:
-#                             co_string += p
-#                         elif p.find("E-mail Address:") != -1:
-#                             has_em=True
-#                             em = p.split(":")[1].strip()
-#                             co_string += p
-#                         elif p !="":
-#                             ps = p.split(",")
-#                             for i in range(ps.__len__() - 2):
-#                                 af += ps[i] + ","
-#                             af += af[:-1] + ";"
-#                             aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
-#                     em_string += em + "##"
-#                     af_string += af[:-1]+ "##"
-#                     aa_string += aa[:-1] + "##"
-#
-#                 article_info[Row_Name.AUTHOR_NAME]=an_string[:-2]
-#                 if has_em:
-#                     article_info[Row_Name.EMAIL]=em_string[:-2]
-#                 article_info[Row_Name.AFFILIATION]=af_string[:-2]
-#                 article_info[Row_Name.AFF_ADDRESS]=aa_string[:-2]
-#                 article_info[Row_Name.CORRESPONDING]=co_string[:-2]
-#
-#
-#                 self.nm.save_article_data(json.dumps(article_info))
-#
-#
-#
-#
-
-#
-#
 

@@ -47,22 +47,30 @@ class spider(threading.Thread):
         logger.info("爬取期刊中的具体信息...")
         for string in self.nm.smembers_wbsite_journal_set(self.section):
             s=json.loads(string)
-            logger.info("爬取 "+s[0]+" 期刊级别的信息...")
-
-            pyfile = __import__("journals.website." + self.section, fromlist=True)
-            c = getattr(pyfile, "journals")
-            c_instance=c()
-
-            m = getattr(c_instance, "run")
-            m(self.section, s[0],s[1])
+            self.run_journal(self.section,s[0],s[1])
+            self.run_article(self.section,s[0])
 
 
-            logger.info("爬取 "+s[0]+" 文章级别的信息...")
 
-            ca = getattr(pyfile, "article")
-            ca_instance=ca()
-            m = getattr(ca_instance, "run")
-            m( s[0])
+
+    def run_journal(self,website,journal,url):
+        logger.info("爬取 " + journal + " 期刊级别的信息...")
+
+        pyfile = __import__("journals.website." + website, fromlist=True)
+        c = getattr(pyfile, "journals")
+        c_instance = c()
+
+        m = getattr(c_instance, "run")
+        m(website, journal,url)
+
+    def run_article(self,website,journal):
+        logger.info("爬取 " + journal+ " 文章级别的信息...")
+
+        pyfile = __import__("journals.website." + website, fromlist=True)
+        ca = getattr(pyfile, "article")
+        ca_instance = ca()
+        m = getattr(ca_instance, "run")
+        m(journal)
 
 class jobs:
     def __init__(self):
@@ -74,6 +82,10 @@ class jobs:
         #     excel_rw.create_and_save_execel(section)
         logger.info("读取配置文件...")
         for section in self.cofig.read_sections():
+            if section=="single":
+                items=self.cofig.read_items(section)
+                self.run_single_journal()
+
             items=self.cofig.read_items(section)
             s=spider(section,items)
             thread.append(s)
@@ -113,16 +125,12 @@ class jobs:
             section=message[1][Row_Name.PUBLISHER]
 
 
-def run_error_test(file,url):
+def run_article_error_test(file,url):
     file=open(file)
     for line in file.readlines():
         if line.find(url)!=-1:
             list=json.loads(line)
-            print(type(list[1])=="str")
-            if type(list[1])=="str":
-                dict = json.loads(list[1])
-            else:
-                dict=list[1]
+            dict = json.loads(list[1])
             if list[0] =="first":
                 if dict[Row_Name.TEMP_URL] == url:
                     pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
@@ -132,34 +140,89 @@ def run_error_test(file,url):
                     print(do_run(json.loads(list[1])))
                     break
             elif list[0] =="second":
-                if list[0] == "second":
-                    if dict[Row_Name.TEMP_AURL] == url:
-                        pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
-                        ac = getattr(pyfile, "article")
-
-                        m_second= getattr(ac(), "second")####
-
-                        m_second(dict)
-
-                        break
+                if dict[Row_Name.TEMP_AURL] == url:
+                    pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
+                    ac = getattr(pyfile, "article")
+                    m_second= getattr(ac(), "second")####
+                    print(m_second(dict))
+                    break
+            elif list[0] =="second_back":
+                pass
 
 
+def run_journal_error_test(file,url):
+    file = open(file)
+    for line in file.readlines():
+        if line.find(url) != -1:
+            strs=line.split("_")
+            pyfile = __import__("journals.website." + strs[0], fromlist=True)
+            ac = getattr(pyfile, "journals")
+            m_get=getattr(ac(),"get")
+            print(m_get(strs[0],strs[1],strs[2]))
 
 
+def run_journal_error(file):
+    file = open(file)
+    j_spider=spider(None,None)
+    for line in file.readlines():
+        strs = line.split("_")
+        j_spider.run_journal(strs[0],strs[1],strs[2])
+        j_spider.run_article(strs[0],strs[1])
 
+def run_article_error(file):
+    file = open(file)
+    errs={}
+    nm=name_manager()
+    for line in file.readlines():
+        temp=json.dumps(json.dumps(line)[1])
+        new_dict={}
+        if Row_Name.EISSN in temp:
+            new_dict[Row_Name.EISSN]=temp[Row_Name.EISSN]
+        if Row_Name.ISSN in temp:
+            new_dict[Row_Name.ISSN]=temp[Row_Name.ISSN]
+        new_dict[Row_Name.JOURNAL_TITLE]=temp[Row_Name.JOURNAL_TITLE]
+        new_dict[Row_Name.PUBLISHER]=temp[Row_Name.PUBLISHER]
+        new_dict[Row_Name.STRING_COVER_DATE]=temp[Row_Name.STRING_COVER_DATE]
+        new_dict[Row_Name.YEAR]=temp[Row_Name.YEAR]
+        new_dict[Row_Name.VOLUME]=temp[Row_Name.VOLUME]
+        new_dict[Row_Name.ISSUE]=temp[Row_Name.ISSUE]
+        new_dict[Row_Name.TEMP_URL]=temp[Row_Name.TEMP_URL]
 
+        string=new_dict[Row_Name.JOURNAL_TITLE]+"_"+new_dict[Row_Name.VOLUME]+"_"+new_dict[Row_Name.ISSUE]
 
+        if not string in errs:
+            errs[string]=new_dict
 
+    for key in errs.keys():
+        pyfile = __import__("journals.website." + errs[key][Row_Name.PUBLISHER], fromlist=True)
+        ac = getattr(pyfile, "article")
+        m_get = getattr(ac(), "do_run")
+        ais=m_get(errs[key])
+
+        if ais != None:
+            for info in ais:
+                nm.save_article_data(json.dumps(info))
+
+            nm.save_download_schedule(key[Row_Name.JOURNAL_TITLE], key[Row_Name.VOLUME],
+                                           key[Row_Name.ISSUE])
+
+def set_discontinue_journal(url):
+    name_manager().save_discontiune_journal(url)
 
 if __name__ == '__main__':
-    job=jobs()
-    job.run_single_website("aspbs")
+    # job=jobs()
+    # job.run_single_website("aspbs")
    # excel_rw.create_and_save_execel("aspbs")
 
-    # path="C:/execl/20190305/article.txt"
-    # url="http://openurl.ingenta.com/content?genre=article&issn=1941-4900&volume=10&issue=5/6&spage=603&epage=605"
-    # run_error_test(path,url)
-    # config=configs()
-    # for section in config.read_sections():
-    #    excel_rw.create_and_save_execel(section)
+    # path="C:/execl/20190306/article.txt"
+    # url="https://www.liebertpub.com/doi/10.1089/lrb.2018.29036.wr"
+    # run_article_error_test(path,url)
+
+    # path="C:/execl/20190306/journal.txt"
+    # url="http://www.aspbs.com/jbns.html"
+    # run_journal_error_test(path,url)
+    config=configs()
+    for item in config.read_items("single"):
+        print(item)
+       # excel_rw.create_and_save_execel(section)
 

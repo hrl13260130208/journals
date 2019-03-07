@@ -7,8 +7,8 @@ import json
 
 REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
-# REDIS_DB="2" #生成使用
-REDIS_DB="10" #测试使用
+REDIS_DB="2" #生成使用
+# REDIS_DB="10" #测试使用
 
 
 
@@ -21,10 +21,6 @@ class name_manager:
         :return:
         '''
         return website+"_journals_set"
-
-
-
-
 
     def create_journal_common_info_name(self,journal):
         '''
@@ -59,7 +55,8 @@ class name_manager:
     def create_article_error_message_name(self):
         return  "article_error_massage_list"
 
-
+    def cteate_discontinue_journal_name(self):
+        return "discontinue_journal_set"
 
 
 
@@ -147,14 +144,47 @@ class name_manager:
         return redis_.lpop(self.create_article_error_message_name())
 
 
+    def is_discontinue_journal(self,url):
+        '''
+        判断是否是需要爬取的期刊
+        :param url:
+        :return:
+        '''
+        return  redis_.sismember(self.cteate_discontinue_journal_name(),url)
+
+    def save_discontiune_journal(self,url):
+        redis_.sadd(self.cteate_discontinue_journal_name(),url)
+
 def website_info(website):
     nm=name_manager()
-    for journal in nm.smembers_wbsite_journal_set(website):
-        journal=json.loads(journal)
+    set=nm.smembers_wbsite_journal_set(website)
+    print("期刊总数：",set.__len__())
+    has_data=[]
+    no_data=[]
+    for journal in set:
+        journal = json.loads(journal)
+        download_set=nm.smembers_journal_download_schedule(journal[0])
+        if download_set.__len__()>0:
+            has_data.append(journal)
+        else:
+            no_data.append(journal)
+
+    print("已下载期刊数：",has_data.__len__())
+    print("已下载期刊详细信息：")
+    journals_info(has_data,nm)
+    print("未下载期刊数：",no_data.__len__())
+    print("未下载期刊详细信息：")
+    journals_info(no_data,nm)
+
+
+    # print(redis_.sismember(nm.create_download_schedule_name("Journal of Nanoscience and            Nanotechnology"),"19_1"))
+
+def journals_info(set,nm):
+    for journal in set:
+
         print("期刊名称："+journal[0])
         print("url:",journal[1])
-        print("已下载卷期：",nm.smembers_journal_download_schedule(journal[0]))
-    # print(redis_.sismember(nm.create_download_schedule_name("Journal of Nanoscience and            Nanotechnology"),"19_1"))
+        print("已下载卷期：",nm.smembers_journal_download_schedule(journal[0]),nm.smembers_journal_download_schedule(journal[0]).__len__())
 
 
 def delte_website(website):
@@ -166,17 +196,17 @@ def delte_website(website):
     redis_.delete(nm.create_website_journal_set_name(website))
 
 if __name__ == '__main__':
-    for key in redis_.keys("*"):
-        redis_.delete(key)
-        # print(key ,redis_.type(key))
-        if redis_.type(key) == "string":
-            print(key,redis_.get(key))
-        elif redis_.type(key) == "set":
-            print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
-        elif redis_.type(key) =="list":
-            print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
-    # delte_website("future")
-
-    # website_info("aspbs")
+    # for key in redis_.keys("*"):
+    #     # redis_.delete(key)
+    #     # print(key ,redis_.type(key))
+    #     if redis_.type(key) == "string":
+    #         print(key,redis_.get(key))
+    #     elif redis_.type(key) == "set":
+    #         print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
+    #     elif redis_.type(key) =="list":
+    #         print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+    # delte_website("aspbs")
+    #
+    website_info("MaryAnn")
 
 
