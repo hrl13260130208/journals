@@ -10,13 +10,16 @@ import logging
 
 
 logger=logging.getLogger("logger")
+
+def wait():
+    time.sleep(random.random() * 5 + 5)
 class website(common_website):
 
     def get(self,section,url):
 
-        time.sleep(random.random()*5+3)
+        wait()
         data = requests.get(url)
-        print(data.text)
+        # print(data.text)
         soup = BeautifulSoup(data.text, "html.parser")
         ul = soup.find("ul", class_=" rlist search-result__body titles-results ")
 
@@ -24,7 +27,7 @@ class website(common_website):
             ul=soup.find("ul", class_="rlist search-result__body titles-results")
         num = url.find(".com")
         prefix = url[:num + 4]
-        print("==================",url)
+        # print("==================",url)
        
         for li in ul.find_all("li"):
             h4 = li.find("h4")
@@ -39,18 +42,20 @@ class journals(common_journals):
         journal_common_info=self.get_common(journal,url)
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
-        time.sleep(random.random() * 5 + 3)
+        wait()
         data = requests.get(url)
         bs = BeautifulSoup(data.text, "html.parser")
+        # print(bs)
         num = url.find(".com")
         prefix = url[:num + 4]
         for li in bs.find_all("li", class_="col-md-4"):
             issue_info = dict(journal_common_info)
-
+            # print(li)
             cdate = li.find("span", class_="coverDate").get_text().strip()
             issue_info[Row_Name.STRING_COVER_DATE] = cdate
             issue_info[Row_Name.YEAR] = cdate[-4:]
             for a in li.find_all("a"):
+                # print(a)
                 a_text = a.get_text().strip()
                 vol_num = a_text.find("VOL")
                 if vol_num != -1:
@@ -58,7 +63,7 @@ class journals(common_journals):
                     issue_info[Row_Name.VOLUME] = a_text[vol_num + 4:issue_num].strip()
                     issue_info[Row_Name.ISSUE] = a_text[issue_num + 3:].strip()
                     issue_info[Row_Name.TEMP_URL] = prefix + a["href"]
-
+            print(issue_info)
             if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
                 self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
@@ -67,7 +72,7 @@ class journals(common_journals):
         common=self.nm.get_journal_common_info(journal)
 
         if common ==None:
-            time.sleep(random.random() * 5 + 3)
+            wait()
             data = requests.get(url)
             soup = BeautifulSoup(data.text, "html.parser")
             div = soup.find("div", class_="meta__info")
@@ -90,10 +95,9 @@ class journals(common_journals):
 
 
 class article(common_article):
-    def first(self,temp_data):
+    def first(self,journal_temp):
         urls=[]
-        journal_temp = json.loads(temp_data)
-        time.sleep(random.random() * 5 + 3)
+        wait()
         data = requests.get(journal_temp[Row_Name.TEMP_URL])
         bs = BeautifulSoup(data.text, "html.parser")
         num = journal_temp[Row_Name.TEMP_URL].find(".com")
@@ -108,14 +112,17 @@ class article(common_article):
 
             article_start_page = i.find("ul", class_="rlist--inline separator toc-item__detail")
             for li in article_start_page.find_all("li"):
-                if li.get_text().find("Pages:") != -1:
+                if li.get_text().find("Page") != -1:
                     [s.extract() for s in li.find("span")]
                     strs = li.get_text().split("–")
                     try:
                         article_info[Row_Name.START_PAGE] = int(strs[0])
-                        article_info[Row_Name.END_PAGE] = int(strs[1])
+                        if strs.__len__()<2:
+                            article_info[Row_Name.END_PAGE] = int(strs[0])
+                        else:
+                            article_info[Row_Name.END_PAGE] = int(strs[1])
                         article_info[Row_Name.PAGE_TOTAL] = article_info[Row_Name.END_PAGE] - article_info[
-                            Row_Name.START_PAGE] + 1
+                                Row_Name.START_PAGE] + 1
                     except:
                         article_info[Row_Name.START_PAGE] = strs[0]
                         article_info[Row_Name.END_PAGE] = strs[1]
@@ -135,7 +142,7 @@ class article(common_article):
 
     def second(self,article_info):
 
-        time.sleep(random.random() * 5 + 3)
+        wait()
         data_s = requests.get(article_info[Row_Name.TEMP_AURL])
         bs_c = BeautifulSoup(data_s.text, "html.parser")
 
@@ -143,13 +150,14 @@ class article(common_article):
         self.set_not_none_item(article_info, Row_Name.ARTICLE_TYPE, article_type["content"])
 
         article_doi = bs_c.find("meta", {"scheme": "doi"})
-        self.set_not_none_item(article_info, Row_Name.DOI, article_doi["content"])
+        if article_doi!=None:
+            article_info[ Row_Name.DOI]= article_doi["content"]
 
         article_title = bs_c.find("meta", {"name": "dc.Title"})
         self.set_not_none_item(article_info, Row_Name.TITLE, article_title["content"])
 
         article_language = bs_c.find("meta", {"name": "dc.Language"})
-        self.set_not_none_item(article_info, Row_Name.LANGUAGE, article_language["content"])
+        self.set_not_none_item(article_info, Row_Name.LANGUAGE, article_language["content"].lower())
 
         article_abstract = bs_c.find("div", class_="abstractSection abstractInFull")
         self.set_possible_none_item(article_info, Row_Name.ABSTRACT, article_abstract)
@@ -169,9 +177,7 @@ class article(common_article):
                     article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
                     article_info[Row_Name.COPYRIGHT_HOLDER]=string.replace(string[re_s.span()[0]:re_s.span()[1]],"").replace("©","").replace("Copyright","").strip()
                 else:
-                    article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace(string[re_s.span()[0]:re_s.span()[1]],
-                                                                             "").replace("©", "").replace("Copyright",
-                                                                                                          "").strip()
+                    article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace("©", "").replace("Copyright", "").strip()
 
 
         self.set_not_none_item(article_info, Row_Name.ABS_URL, data_s.url)
@@ -187,10 +193,19 @@ class article(common_article):
         has_aa=False
         has_em = False
         div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
-                       + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
+        #
+        name_dict={}
+        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+               + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "})\
+                +div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
+               +div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
             a = div_tag.find("a", href="#")
-            an_string += a["title"].strip() + "##"
+
+            name=a["title"].strip()
+            if name in name_dict:
+                continue
+            name_dict[name]=1
+            an_string += name + "##"
             div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
             [s.extract() for s in div_s.find("div", class_="bottom-info")]
             af = ""
@@ -204,7 +219,8 @@ class article(common_article):
                 elif p.find("E-mail Address:") != -1:
                     has_em = True
                     em = p.split(":")[1].strip()
-                    co_string += p
+                    if co_string.find(em)==-1:
+                        co_string += p
                 elif p != "":
                     ps = p.split(",")
                     for i in range(ps.__len__() - 2):
@@ -216,7 +232,7 @@ class article(common_article):
                 af_string +=  "$$##"
             else:
                 af_string += af[:-1] + "##"
-                hasaf=True
+                has_af=True
 
             if aa=="":
                 aa_string +=  "$$##"
@@ -231,9 +247,9 @@ class article(common_article):
             article_info[Row_Name.AFFILIATION] = af_string[:-2]
         if has_aa:
             article_info[Row_Name.AFF_ADDRESS] = aa_string[:-2]
-        article_info[Row_Name.CORRESPONDING] = co_string[:-2]
+        article_info[Row_Name.CORRESPONDING] = co_string
 
-        self.nm.save_article_data(json.dumps(article_info))
+        return article_info
 
     def set_not_none_item(self,a_info,key,value):
         if value == None:
@@ -246,6 +262,47 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    article_info={}
-    url="https://www.future-science.com/toc/ppa/6/2"
-    # print(first(url))
+    journal_temp={}
+    url="https://www.future-science.com/toc/btn/64/3"
+    data = requests.get(url)
+    bs = BeautifulSoup(data.text, "html.parser")
+    num = url.find(".com")
+    prefix = url[:num + 4]
+    div = bs.find("div", class_="table-of-content")
+    for i in div.find_all("div", class_="issue-item"):
+        article_info = dict(journal_temp)
+        # i=div.find("div",class_="issue-item")
+        title = i.find("h5")
+        article_url = title.find("a")["href"]
+        article_info[Row_Name.TEMP_AURL] = prefix + article_url
+
+        article_start_page = i.find("ul", class_="rlist--inline separator toc-item__detail")
+        for li in article_start_page.find_all("li"):
+            if li.get_text().find("Page") != -1:
+                [s.extract() for s in li.find("span")]
+                strs = li.get_text().split("–")
+                print(strs)
+                try:
+                    article_info[Row_Name.START_PAGE] = int(strs[0])
+                    if strs.__len__() < 2:
+                        article_info[Row_Name.END_PAGE] = int(strs[0])
+                    else:
+                        article_info[Row_Name.END_PAGE] = int(strs[1])
+                    article_info[Row_Name.PAGE_TOTAL] = article_info[Row_Name.END_PAGE] - article_info[
+                        Row_Name.START_PAGE] + 1
+                except:
+                    article_info[Row_Name.START_PAGE] = strs[0]
+                    article_info[Row_Name.END_PAGE] = strs[1]
+                    num_0 = re.search("\d+", strs[0])
+                    num_1 = re.search("\d+", strs[1])
+                    try:
+                        article_info[Row_Name.PAGE_TOTAL] = int(strs[1][num_1.span()[0]:num_1.span()[1]]) - int(
+                            strs[0][num_0.span()[0]:num_0.span()[1]])
+                    except:
+                        pass
+
+            elif li.get_text().find("Published Online:") != -1:
+                [s.extract() for s in li.find("span")]
+                # self.set_possible_none_item(article_info, Row_Name.STRING_PUB_DATE, li)
+
+            print(article_info)
