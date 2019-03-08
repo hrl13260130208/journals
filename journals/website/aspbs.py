@@ -7,6 +7,7 @@ import re
 from journals.redis_manager import name_manager
 from journals.common import Row_Name,common_website,common_journals,common_article
 import logging
+from journals.job import jobs
 
 
 logger=logging.getLogger("logger")
@@ -36,16 +37,7 @@ class journals(common_journals):
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
         time.sleep(random.random() * 3)
-        # cookie={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-        #         "Accept-Encoding":"gzip, deflate",
-        #         "Accept-Language": "zh-CN,zh;q=0.9",
-        #         "Cache-Control":" max-age=0",
-        #         "Connection":" keep-alive",
-        #         "Host": "www.aspbs.com",
-        #         "If-Modified-Since":"Tue, 29 Jan 2019 13:24:00 GMT",
-        #
-        #         "Upgrade-Insecure-Requests": "1",
-        #         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"}
+
         data = requests.get(url)
         bs = BeautifulSoup(data.text, "html.parser")
         # print(bs)
@@ -55,13 +47,13 @@ class journals(common_journals):
             if  a_string.find("Vol") != -1:
                 issue_info = dict(journal_common_info)
                 issue_info[Row_Name.VOLUME]=re.search("\d+", re.search("Vol.+\d+", a_string).group()).group()
-                issue_info[Row_Name.ISSUE]=re.search("\d+", re.search("N.+\d+", a_string).group()).group()
+                issue_info[Row_Name.ISSUE] = re.search("\d+/*\d*", re.search("N.+\d+/*\d*", a_string).group()).group()
                 cdate=re.search("\(.+\d{4}\)", a_string).group()[1:-1]
                 issue_info[Row_Name.STRING_COVER_DATE]=cdate
                 issue_info[Row_Name.YEAR]=cdate[-4:]
                 issue_info[Row_Name.TEMP_URL] = "http://www.aspbs.com/" + a["href"]
 
-                # print(issue_info)
+                print(issue_info)
                 if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
                     self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
@@ -139,19 +131,29 @@ class article(common_article):
                             b_string = b.get_text().strip().replace("\n", " ").replace("\r", " ")
                             if b_string.find("Volume") != -1 and b_string.find("Number") != -1:
                                 volume = re.search("\d+", re.search("Vol.+\d+", b_string).group()).group()
-                                no = re.search("\d+", re.search("Number.+\d+", b_string).group()).group()
+                                no = re.search("\d+/*\d*", re.search("Number.+\d+/*\d*", b_string).group()).group()
 
-                        if int(volume) == int(journal_temp[Row_Name.VOLUME]) and int(no) == int(journal_temp[Row_Name.ISSUE]):
-                            for p in trs[i + 1].find_all("p", class_="sans-12"):
-                                article_info = dict(journal_temp)
-                                a = p.find("a")
-                                if a ==None:
-                                    continue
-                                article_info[Row_Name.TEMP_AURL]=a["href"]
-                                # print(article_info)
-                                urls.append(article_info)
+                        nos=False
+                        if no !=-1:
+                            if no.find("/")!=-1:
+                                n=no.split("/")
+                                iss=journal_temp[Row_Name.ISSUE].split("/")
+                                if int(n[0]) ==int(iss[0]):
+                                    nos=int(no[1])==int(iss[1])
+                            else:
+                                nos=int(no) == int(journal_temp[Row_Name.ISSUE])
 
-                            break
+                            if int(volume) == int(journal_temp[Row_Name.VOLUME]) and nos:
+                                for p in trs[i + 1].find_all("p", class_="sans-12"):
+                                    article_info = dict(journal_temp)
+                                    a = p.find("a")
+                                    if a ==None:
+                                        continue
+                                    article_info[Row_Name.TEMP_AURL]=a["href"]
+                                    # print(article_info)
+                                    urls.append(article_info)
+
+                                break
         return urls
 
     def back(self,article_info,ais):
@@ -182,7 +184,7 @@ class article(common_article):
                 ais.append(ai)
             except:
                 logger.error("爬取文章出错：" + url[Row_Name.TEMP_AURL] + " 。错误信息：", exc_info=True)
-                message = ["second_back", url]
+                message = ["second_back", json.dumps(url)]
                 self.nm.save_article_error_message(json.dumps(message))
 
         return self.is_break
@@ -303,102 +305,30 @@ class article(common_article):
             a_info[key]=value.get_text().strip()
 
 
-def a(b,c,d):
-    b=True
-    c=True
-    d.append("assdf")
 
 if __name__ == '__main__':
-    article_info={}
-    url="https://www.ingentaconnect.com/content/asp/jnn/2018/00000018/00000009/art00001%3bjsessionid=ercamjqd1dcaj.x-ic-live-01"
-
-    data_s = requests.get(url)
-    bs_c = BeautifulSoup(data_s.text, "html.parser")
-
-    div_1 = bs_c.find("div", {"id": "Info"})
-    author_aff = {}
-    an_string = ""
-    af_string = ""
-    aa_string = ""
-    has_af = False
-    for p in div_1.find_all("p"):
-        string_p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-        if string_p.find("Keywords:") != -1:
-            article_info[Row_Name.KEYWORD] = string_p.split(":")[1].replace(";", "##")
-        elif string_p.find("Document Type:") != -1:
-            article_info[Row_Name.ARTICLE_TYPE] = string_p.split(":")[1]
-        elif string_p.find("Publication date:") != -1:
-            article_info[Row_Name.STRING_PUB_DATE] = string_p.split(":")[1]
-        elif string_p.find("Affiliations:") != -1:
-            i = 1
-            for span in p.find_all("span"):
-                author_aff[i] = span.get_text()
-                i += 1
-
-    doi = bs_c.find("meta", {"name": "DC.identifier"})
-    if doi != None:
-        article_info[Row_Name.DOI] = doi["content"][9:]
-
-    article_title = bs_c.find("meta", {"name": "DC.title"})
-    article_info[Row_Name.TITLE] = article_title["content"]
-
-    lang = bs_c.find("html")
-    article_info[Row_Name.LANGUAGE] = lang["lang"]
-
-    abs = bs_c.find("div", id="Abst")
-    article_info[Row_Name.ABSTRACT] = abs.get_text().strip().replace("\n", " ").replace("\r", " ")
-
-    for div_2 in bs_c.find_all("div", class_="supMetaData"):
-        for p1 in div_2.find_all("p"):
-
-            if p1.get_text().find("Source:") != -1:
-                page = p1.find("span", class_="pagesNum").get_text()
-                article_info[Row_Name.START_PAGE] = re.search("\d+-", page).group()[:-1]
-                article_info[Row_Name.END_PAGE] = re.search("-\d+", page).group()[1:]
-                article_info[Row_Name.PAGE_TOTAL] = re.search("\(\d+\)", page).group()[1:-1]
-
-            elif p1.get_text().find("Authors:") != -1:
-
-                [s.extract() for s in p1.find_all("strong")]
-                for name in p1.get_text().split(";"):
-                    num = re.search("\d+", name)
-                    af = ""
-                    aa = ""
-
-                    if num != None:
-                        has_af = True
-                        name = name[:num.start()]
-                        af_aa = author_aff[int(num.group())]
-                        print(af_aa)
-                        ps = af_aa.split(",")
-                        print(ps.__len__())
-                        if ps.__len__() > 2:
-                            for i in range(ps.__len__() - 2):
-                                af += ps[i] + ","
-                            af += af[:-1] + ";"
-                            aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
-                        else:
-                            af += af_aa
-
-                    if af == "":
-                        af_string += "$$##"
-                    else:
-                        af_string += af[:-1] + "##"
-                    if aa == "":
-                        aa_string += "$$##"
-                    else:
-                        aa_string += aa[:-1] + "##"
-
-                    an_string += name.replace("\xa0", "") + "##"
-
-    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
-    if has_af:
-        article_info[Row_Name.AFFILIATION] = af_string[:-2]
-        article_info[Row_Name.AFF_ADDRESS] = aa_string[:-2]
-
-    article_info[Row_Name.ABS_URL] = data_s.url
-    article_info[Row_Name.PAGEURL] = data_s.url
-    article_info[Row_Name.FULLTEXT_URL] = data_s.url
-    print(article_info)
+    job = jobs()
+    job.run_single_website("aspbs")
+    # issue_info = {}
+    # url="http://www.aspbs.com/ctn.html"
+    #
+    # time.sleep(random.random() * 3)
+    #
+    # data = requests.get(url)
+    # bs = BeautifulSoup(data.text, "html.parser")
+    # print(bs)
+    # for a in bs.find_all("a"):
+    #     a_string = a.get_text().strip().replace("\n", " ").replace("\r", " ")
+    #     # print(a_string)
+    #     if a_string.find("Vol") != -1:
+    #
+    #         issue_info[Row_Name.VOLUME] = re.search("\d+", re.search("Vol.+\d+", a_string).group()).group()
+    #         issue_info[Row_Name.ISSUE] = re.search("\d+/*\d*", re.search("N.+\d+/*\d*", a_string).group()).group()
+    #         cdate = re.search("\(.+\d{4}\)", a_string).group()[1:-1]
+    #         issue_info[Row_Name.STRING_COVER_DATE] = cdate
+    #         issue_info[Row_Name.YEAR] = cdate[-4:]
+    #         issue_info[Row_Name.TEMP_URL] = "http://www.aspbs.com/" + a["href"]
+    #
+    #         print(issue_info)
 
 
