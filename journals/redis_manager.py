@@ -7,8 +7,9 @@ import json
 
 REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
-REDIS_DB="2" #生成使用
-# REDIS_DB="10" #测试使用
+# REDIS_DB="2" #MaryAnn
+# REDIS_DB="10" #aspbs
+REDIS_DB="9" #aspbs test
 
 
 
@@ -156,6 +157,11 @@ class name_manager:
         redis_.sadd(self.cteate_discontinue_journal_name(),url)
 
 def website_info(website):
+    '''
+    查询指定网站下的期刊信息
+    :param website:
+    :return:
+    '''
     nm=name_manager()
     set=nm.smembers_wbsite_journal_set(website)
     print("期刊总数：",set.__len__())
@@ -187,7 +193,13 @@ def journals_info(set,nm):
         print("已下载卷期：",nm.smembers_journal_download_schedule(journal[0]),nm.smembers_journal_download_schedule(journal[0]).__len__())
 
 
-def delte_website(website):
+def delete_website(website):
+
+    '''
+    删除指定网站下的所有期刊信息
+    :param website:
+    :return:
+    '''
     nm = name_manager()
     for journal in nm.smembers_wbsite_journal_set(website):
         journal = json.loads(journal)
@@ -195,18 +207,27 @@ def delte_website(website):
             redis_.delete(i)
     redis_.delete(nm.create_website_journal_set_name(website))
 
+def delete_downloads():
+    '''
+    删除未导出到的数据与错误信息
+    :return:
+    '''
+    redis_.delete("article_data_list")
+    redis_.delete("article_error_massage_list")
+
 if __name__ == '__main__':
-    # for key in redis_.keys("*"):
-    #     # redis_.delete(key)
-    #     # print(key ,redis_.type(key))
-    #     if redis_.type(key) == "string":
-    #         print(key,redis_.get(key))
-    #     elif redis_.type(key) == "set":
-    #         print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
-    #     elif redis_.type(key) =="list":
-    #         print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
-    # delte_website("aspbs")
+    for key in redis_.keys("*"):
+        # redis_.delete(key)
+        # print(key ,redis_.type(key))
+        if redis_.type(key) == "string":
+            print(key,redis_.get(key))
+        elif redis_.type(key) == "set":
+            print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
+        elif redis_.type(key) =="list":
+            print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+    # delete_downloads()
     #
-    website_info("MaryAnn")
+    # website_info("aspbs")
+    # delte_website("MaryAnn")
 
 

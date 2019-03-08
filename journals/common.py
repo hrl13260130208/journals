@@ -69,7 +69,7 @@ class common_journals:
             if not self.nm.is_discontinue_journal(url):
                 self.get(website,journal,url)
         except:
-            logger.info("爬取"+journal+"失败!")
+            logger.info("爬取"+journal+"失败!", exc_info=True)
             self.nm.save_journal_error_message(website+"_"+journal+"_"+url)
 
 
