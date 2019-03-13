@@ -9,7 +9,7 @@ REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
 # REDIS_DB="2" #MaryAnn
 # REDIS_DB="10" #aspbs
-REDIS_DB="9" #aspbs test
+REDIS_DB="11" #aspbs test
 
 
 
@@ -228,6 +228,6 @@ if __name__ == '__main__':
     # delete_downloads()
     #
     # website_info("aspbs")
-    # delte_website("MaryAnn")
+    # delete_website("future")
 
 

@@ -14,7 +14,7 @@ logger=logging.getLogger("logger")
 
 class configs:
     def __init__(self):
-        self.path="C:/File/workspace/journals/journals/config.cfg"
+        self.path="F:/hrl/soft/workspace/journals/journals/config.cfg"
         self.conf = ConfigParser()
         self.conf.read(self.path)
 
@@ -279,8 +279,8 @@ if __name__ == '__main__':
 
    # excel_rw.create_and_save_execel("aspbs")
 
-    path="C:/execl/20190307/article.txt"
-    # url="http://www.aspbs.com/JBN/contents_jbn2018.htm#v14n6"
+    path="C:/execl/20190312_t/article.txt"
+    # url="https://www.futuremedicine.com/doi/10.2217/rme-2018-1308s"
     # run_article_error_test(path,url)
     run_article_error(path)
 
