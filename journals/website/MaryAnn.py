@@ -13,7 +13,7 @@ import logging
 logger=logging.getLogger("logger")
 
 def wait():
-    time.sleep(random.random() * 3+2)
+    time.sleep(random.random() * 4+3)
 class website(common_website):
 
     def get(self,section,url):
@@ -26,7 +26,12 @@ class website(common_website):
                 a=div_tag.find("a")["href"]
                 url="https://home.liebertpub.com"+a
                 wait()
-                data2 = requests.get(url)
+                logger.info("解析MaryAnn的期刊："+url)
+                try:
+                    data2 = requests.get(url)
+                except:
+                    time.sleep(10)
+                    data2 = requests.get(url)
                 bs = BeautifulSoup(data2.text, "html.parser")
                 issn_url=""
                 for a in bs.find_all("a", class_="nav-link px-3"):
@@ -251,82 +256,82 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    # job=jobs()
-    # job.run_single_website("MaryAnn")
+    job=jobs()
+    job.run_single_website("MaryAnn")
 
-    article_info={}
-    url="https://www.liebertpub.com/doi/10.1089/jmf.2018.4181"
-
-    data_s = requests.get(url)
-    bs_c = BeautifulSoup(data_s.text, "html.parser")
-
-    article_keyword = bs_c.find("meta", {"name": "keywords"})
-    # self.set_possible_none_item(article_info,Row_Name.KEYWORD,article_keyword["content"].replace(",","##"))
-    if article_keyword != None:
-        article_info[Row_Name.KEYWORD] = article_keyword["content"].replace(",", "##")
-
-    for section in bs_c.find_all("section", class_="section"):
-        if section.find("strong").get_text() == "Information":
-            string = section.find("div").get_text().strip()
-            article_info[Row_Name.COPYRIGHT_STATEMENT] = string
-            re_s = re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}", string)
-            if re_s != None:
-                article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
-            if string.find("Mary Ann") != -1:
-                article_info[Row_Name.COPYRIGHT_HOLDER] = "Mary Ann Liebert, Inc"
-            else:
-                article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace("©", "").replace("Copyright", "").strip()
-
-
-
-    an_string = ""
-    em_string = ""
-    af_string = ""
-    co_string = ""
-    has_af = False
-    has_em = False
-    div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-    for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
-                   + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
-        a = div_tag.find("a", href="#")
-        an_string += a["title"].strip() + "##"
-        div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
-        [s.extract() for s in div_s.find("div", class_="bottom-info")]
-        af = ""
-        aa = ""
-        em = "$$"
-        print("================", a["title"].strip())
-        for p in div_s.find_all("p"):
-            print(p)
-            p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-            if p.find("Address correspondence to:") != -1:
-                co_string += p
-            elif p.find("E-mail Address:") != -1:
-                has_em = True
-                if em.find("$$") != -1:
-                    em = p.split(":")[1].strip()
-                else:
-                    em += ";" + p.split(":")[1].strip()
-                if p.find(em) == -1:
-                    co_string += p
-            elif p != "":
-                af+=p+";"
-                print("+++++++++++++++",af)
-        em_string += em + "##"
-        if af == "":
-            af_string += "$$##"
-        else:
-            af_string += af[:-1] + "##"
-            has_af = True
-
-    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
-    if has_em:
-        article_info[Row_Name.EMAIL] = em_string[:-2]
-    if has_af:
-        article_info[Row_Name.AFFILIATION] = af_string[:-2]
-
-    article_info[Row_Name.CORRESPONDING] = co_string
-    print(article_info)
+    # article_info={}
+    # url="https://www.liebertpub.com/doi/10.1089/jmf.2018.4181"
+    #
+    # data_s = requests.get(url)
+    # bs_c = BeautifulSoup(data_s.text, "html.parser")
+    #
+    # article_keyword = bs_c.find("meta", {"name": "keywords"})
+    # # self.set_possible_none_item(article_info,Row_Name.KEYWORD,article_keyword["content"].replace(",","##"))
+    # if article_keyword != None:
+    #     article_info[Row_Name.KEYWORD] = article_keyword["content"].replace(",", "##")
+    #
+    # for section in bs_c.find_all("section", class_="section"):
+    #     if section.find("strong").get_text() == "Information":
+    #         string = section.find("div").get_text().strip()
+    #         article_info[Row_Name.COPYRIGHT_STATEMENT] = string
+    #         re_s = re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}", string)
+    #         if re_s != None:
+    #             article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
+    #         if string.find("Mary Ann") != -1:
+    #             article_info[Row_Name.COPYRIGHT_HOLDER] = "Mary Ann Liebert, Inc"
+    #         else:
+    #             article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace("©", "").replace("Copyright", "").strip()
+    #
+    #
+    #
+    # an_string = ""
+    # em_string = ""
+    # af_string = ""
+    # co_string = ""
+    # has_af = False
+    # has_em = False
+    # div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+    # for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
+    #                + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
+    #     a = div_tag.find("a", href="#")
+    #     an_string += a["title"].strip() + "##"
+    #     div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+    #     [s.extract() for s in div_s.find("div", class_="bottom-info")]
+    #     af = ""
+    #     aa = ""
+    #     em = "$$"
+    #     print("================", a["title"].strip())
+    #     for p in div_s.find_all("p"):
+    #         print(p)
+    #         p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+    #         if p.find("Address correspondence to:") != -1:
+    #             co_string += p
+    #         elif p.find("E-mail Address:") != -1:
+    #             has_em = True
+    #             if em.find("$$") != -1:
+    #                 em = p.split(":")[1].strip()
+    #             else:
+    #                 em += ";" + p.split(":")[1].strip()
+    #             if p.find(em) == -1:
+    #                 co_string += p
+    #         elif p != "":
+    #             af+=p+";"
+    #             print("+++++++++++++++",af)
+    #     em_string += em + "##"
+    #     if af == "":
+    #         af_string += "$$##"
+    #     else:
+    #         af_string += af[:-1] + "##"
+    #         has_af = True
+    #
+    # article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    # if has_em:
+    #     article_info[Row_Name.EMAIL] = em_string[:-2]
+    # if has_af:
+    #     article_info[Row_Name.AFFILIATION] = af_string[:-2]
+    #
+    # article_info[Row_Name.CORRESPONDING] = co_string
+    # print(article_info)
 
 
 
