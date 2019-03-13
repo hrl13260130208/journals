@@ -49,6 +49,17 @@ class common_journals:
         self.method = []
 
     def get(self,website,journal,url):
+        '''
+        需要子类实现
+            实现内容：
+                必需项：YEAR、VOLUME、ISSUE
+                期刊层可以爬取的信息（）
+
+        :param website:
+        :param journal:
+        :param url:
+        :return:
+        '''
         pass
 
     def run(self,website,journal,url):
@@ -105,6 +116,11 @@ class common_article:
 
 
     def do_run(self,journal_temp):
+        '''
+
+        :param journal_temp:
+        :return:
+        '''
         ais = []
         len=-1
         try:
@@ -120,8 +136,9 @@ class common_article:
                     ais.append(ai)
                 except:
                     logger.error("爬取文章出错：" + url[Row_Name.TEMP_AURL] + " 。错误信息：", exc_info=True)
-
+                    result=""
                     try:
+                        logger.info("执行back方法...")
                         result=self.back(url,ais)
                     except:
                         pass
@@ -139,12 +156,28 @@ class common_article:
             return ais
 
     def first(self,temp_data):
+        '''
+
+        :param temp_data:
+        :return:
+        '''
         pass
 
     def second(self,article_info):
+        '''
+
+        :param article_info:
+        :return:
+        '''
         pass
 
     def back(self,article_info,ais):
+        '''
+
+        :param article_info:
+        :param ais:
+        :return:
+        '''
         pass
 
 

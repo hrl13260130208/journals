@@ -17,6 +17,11 @@ EXECEL_PATH="C:/execl/"
 
 sb={}
 def create_colume_name_variable(path):
+    '''
+    创建表头变量（读取execl表头生成Row_Name中的变量）
+    :param path:
+    :return:
+    '''
     rb = xlrd.open_workbook(path)
     r_sheet = rb.sheet_by_index(0)
     row0=r_sheet.row(0)
@@ -24,6 +29,11 @@ def create_colume_name_variable(path):
         print(i.value.upper()+"=\""+i.value+"\"")
 
 def create_and_save_execel(section):
+    '''
+    创建excel并将数据写入execl
+    :param section:
+    :return:
+    '''
     execel_name=create_execl_name(section)
     wb=openpyxl.Workbook()
     sheet=wb.create_sheet("sheet1",0)
@@ -47,6 +57,11 @@ def create_and_save_execel(section):
 
 
 def create_execl_name(section):
+    '''
+    创建Excel的名称
+    :param section:
+    :return:
+    '''
     date_time=time.strftime("%Y%m%d", time.localtime())
     return "wc_hrl_"+section+"_"+date_time+"_1_"+date_time+".xlsx"
 
@@ -56,6 +71,10 @@ def write_first_line(sheet):
         sheet.cell(1,d[key]+1,key)
 
 def write_logs():
+    '''
+    创建日志
+    :return:
+    '''
     date_time = time.strftime("%Y%m%d", time.localtime())
     path=EXECEL_PATH+date_time
     if not os.path.exists(path):
@@ -78,19 +97,27 @@ def write_log(num,file_path):
             break
         file.write(temp_data+"\n")
 
+def update_excel():
+    execl = openpyxl.load_workbook("C:/execl/提交/wc_hrl_future_20190309_1_20190309.xlsx")
+    sheet = execl.get_sheet_by_name("sheet1")
+    # print(sheet.cell(3,Row_Name.COLUME_NUM[Row_Name.AFFILIATION]+1).value)
 
-class test:
-    def test(self):
-       try:
-           a=1/1
+    for i in sheet.rows:
+        em = i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value
+        co = i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value
+        # print(em,co)
+        if co != None:
+            co = co.replace("*", "").replace("E-mail Address:", "")
+        if em != None:
+            em = em.replace("E-mail Address", "")
+            for e in em.split("##"):
+                if e != "$$":
+                    co = co.replace(e.strip(), "")
+                    co += e
+        i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value = em
+        i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value = co
 
-           try:
-               b=1/0
-           except:
-               print("99999999999")
-       except:
-           print("ssssss")
-
+    execl.save("C:/execl/wc_hrl_future_20190309_1_20190309.xlsx")
 
 
 if __name__ == '__main__':
@@ -100,13 +127,10 @@ if __name__ == '__main__':
     # sheet=wb.create_sheet("sheet1",0)
     # sheet.cell(1,1,1)
     # wb.save(EXECEL_PATH+"ts.xlsx")
-    execl=openpyxl.load_workbook("C:/execl/wc_hrl_MaryAnn_20190228_1_20190228.xlsx")
-    sheet=execl.get_sheet_by_name("sheet1")
-    # print(sheet.cell(3,Row_Name.COLUME_NUM[Row_Name.AFFILIATION]+1).value)
 
-    for i in sheet.rows:
-        pt=i[Row_Name.COLUME_NUM[Row_Name.AFFILIATION]].value
-        print(pt)
+    pass
+
+
     #     if pt ==None:
     #         sp=i[Row_Name.COLUME_NUM[Row_Name.START_PAGE]].value
     #         ep=i[Row_Name.COLUME_NUM[Row_Name.END_PAGE]].value

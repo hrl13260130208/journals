@@ -52,7 +52,8 @@ class journals(common_journals):
     def get(self,website,journal,url):
         journal_common_info=self.get_common(journal,url)
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
-        journal_common_info[Row_Name.PUBLISHER]=website
+        if website.find("  ")!=-1:
+            journal_common_info[Row_Name.PUBLISHER]=website[:website.find("  ")]
         wait()
         data = requests.get(url)
         bs = BeautifulSoup(data.text, "html.parser")
@@ -191,10 +192,8 @@ class article(common_article):
         an_string = ""
         em_string = ""
         af_string = ""
-        aa_string = ""
         co_string = ""
         has_af = False
-        has_aa = False
         has_em = False
         div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
         for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
@@ -206,25 +205,23 @@ class article(common_article):
             af = ""
             aa = ""
             em = "$$"
-
+            print("================", a["title"].strip())
             for p in div_s.find_all("p"):
+                print(p)
                 p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
                 if p.find("Address correspondence to:") != -1:
                     co_string += p
                 elif p.find("E-mail Address:") != -1:
                     has_em = True
-                    em = p.split(":")[1].strip()
+                    if em.find("$$") != -1:
+                        em = p.split(":")[1].strip()
+                    else:
+                        em += ";" + p.split(":")[1].strip()
                     if p.find(em) == -1:
                         co_string += p
                 elif p != "":
-                    ps = p.split(",")
-                    if ps.__len__() > 2:
-                        for i in range(ps.__len__() - 2):
-                            af += ps[i] + ","
-                        af += af[:-1] + ";"
-                        aa += ps[ps.__len__() - 2] + "," + ps[ps.__len__() - 1] + ";"
-                    else:
-                        af = p
+                    af += p + ";"
+                    print("+++++++++++++++", af)
             em_string += em + "##"
             if af == "":
                 af_string += "$$##"
@@ -232,19 +229,12 @@ class article(common_article):
                 af_string += af[:-1] + "##"
                 has_af = True
 
-            if aa == "":
-                aa_string += "$$##"
-            else:
-                aa_string += aa[:-1] + "##"
-                has_aa = True
-
         article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
         if has_em:
             article_info[Row_Name.EMAIL] = em_string[:-2]
         if has_af:
             article_info[Row_Name.AFFILIATION] = af_string[:-2]
-        if has_aa:
-            article_info[Row_Name.AFF_ADDRESS] = aa_string[:-2]
+
         article_info[Row_Name.CORRESPONDING] = co_string
 
         return article_info
@@ -261,8 +251,82 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    job=jobs()
-    job.run_single_website("MaryAnn")
+    # job=jobs()
+    # job.run_single_website("MaryAnn")
+
+    article_info={}
+    url="https://www.liebertpub.com/doi/10.1089/jmf.2018.4181"
+
+    data_s = requests.get(url)
+    bs_c = BeautifulSoup(data_s.text, "html.parser")
+
+    article_keyword = bs_c.find("meta", {"name": "keywords"})
+    # self.set_possible_none_item(article_info,Row_Name.KEYWORD,article_keyword["content"].replace(",","##"))
+    if article_keyword != None:
+        article_info[Row_Name.KEYWORD] = article_keyword["content"].replace(",", "##")
+
+    for section in bs_c.find_all("section", class_="section"):
+        if section.find("strong").get_text() == "Information":
+            string = section.find("div").get_text().strip()
+            article_info[Row_Name.COPYRIGHT_STATEMENT] = string
+            re_s = re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}", string)
+            if re_s != None:
+                article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
+            if string.find("Mary Ann") != -1:
+                article_info[Row_Name.COPYRIGHT_HOLDER] = "Mary Ann Liebert, Inc"
+            else:
+                article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace("©", "").replace("Copyright", "").strip()
+
+
+
+    an_string = ""
+    em_string = ""
+    af_string = ""
+    co_string = ""
+    has_af = False
+    has_em = False
+    div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+    for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
+                   + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
+        a = div_tag.find("a", href="#")
+        an_string += a["title"].strip() + "##"
+        div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+        [s.extract() for s in div_s.find("div", class_="bottom-info")]
+        af = ""
+        aa = ""
+        em = "$$"
+        print("================", a["title"].strip())
+        for p in div_s.find_all("p"):
+            print(p)
+            p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+            if p.find("Address correspondence to:") != -1:
+                co_string += p
+            elif p.find("E-mail Address:") != -1:
+                has_em = True
+                if em.find("$$") != -1:
+                    em = p.split(":")[1].strip()
+                else:
+                    em += ";" + p.split(":")[1].strip()
+                if p.find(em) == -1:
+                    co_string += p
+            elif p != "":
+                af+=p+";"
+                print("+++++++++++++++",af)
+        em_string += em + "##"
+        if af == "":
+            af_string += "$$##"
+        else:
+            af_string += af[:-1] + "##"
+            has_af = True
+
+    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    if has_em:
+        article_info[Row_Name.EMAIL] = em_string[:-2]
+    if has_af:
+        article_info[Row_Name.AFFILIATION] = af_string[:-2]
+
+    article_info[Row_Name.CORRESPONDING] = co_string
+    print(article_info)
 
 
 
