@@ -7,9 +7,10 @@ import json
 
 REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
-# REDIS_DB="2" #MaryAnn
+REDIS_DB="2" #MaryAnn
 # REDIS_DB="10" #aspbs
-REDIS_DB="9" #aspbs test
+# REDIS_DB="9" #aspbs test
+# REDIS_DB="11" #aspbs test
 
 
 
@@ -48,22 +49,38 @@ class name_manager:
         return  journal+"_temp_data"
 
     def create_article_data_name(self):
+        '''
+        创建存储文章信息的list的名称
+        :return:
+        '''
         return  "article_data_list"
 
     def create_journal_error_message_name(self):
+        '''
+        创建存储期刊级别错误信息的list的名称
+        :return:
+        '''
         return  "journal_error_massage_list"
 
     def create_article_error_message_name(self):
+        '''
+        创建存储文章级别错误信息的list的名称
+        :return:
+        '''
         return  "article_error_massage_list"
 
     def cteate_discontinue_journal_name(self):
+        '''
+        创建存储不需要的期刊（停刊）的set的名称
+        :return:
+        '''
         return "discontinue_journal_set"
 
 
 
     def seve_website_journal_set(self,website,string):
         '''
-        存储网站内期刊（期刊名和url）的set
+        存储网站内期刊（期刊名和url）的set的名称
         :param website:
         :param string:
         :return:
@@ -72,11 +89,6 @@ class name_manager:
 
     def smembers_wbsite_journal_set(self,website):
         return redis_.smembers(self.create_website_journal_set_name(website))
-
-
-
-
-
 
     def save_journal_common_info(self,journal,info):
         '''
@@ -92,7 +104,7 @@ class name_manager:
 
     def save_download_schedule(self, journal, volume, issue):
         '''
-        存储下载进度,向set中存储数据存储成功则为增量
+        存储下载进度
         :param journal:
         :param volume:
         :param issue:
@@ -122,9 +134,7 @@ class name_manager:
 
         if int(year)>=p_year:
             return not redis_.sismember(self.create_download_schedule_name(journal), volume + "_" + issue)
-        #     num=self.seve_download_schedule(journal,volume,issue)
-        #     return num ==1
-        # return False
+
 
     def save_article_data(self,data):
         redis_.lpush(self.create_article_data_name(),data)
@@ -154,6 +164,11 @@ class name_manager:
         return  redis_.sismember(self.cteate_discontinue_journal_name(),url)
 
     def save_discontiune_journal(self,url):
+        '''
+        存储不需要爬取的期刊（停刊）的链接
+        :param url:
+        :return:
+        '''
         redis_.sadd(self.cteate_discontinue_journal_name(),url)
 
 def website_info(website):
@@ -162,6 +177,8 @@ def website_info(website):
     :param website:
     :return:
     '''
+
+
     nm=name_manager()
     set=nm.smembers_wbsite_journal_set(website)
     print("期刊总数：",set.__len__())
@@ -189,6 +206,9 @@ def journals_info(set,nm):
     for journal in set:
 
         print("期刊名称："+journal[0])
+        string=journal[0]
+        if string.find("  ")!=-1:
+            print(string[:string.find("  ")])
         print("url:",journal[1])
         print("已下载卷期：",nm.smembers_journal_download_schedule(journal[0]),nm.smembers_journal_download_schedule(journal[0]).__len__())
 
@@ -216,18 +236,19 @@ def delete_downloads():
     redis_.delete("article_error_massage_list")
 
 if __name__ == '__main__':
-    for key in redis_.keys("*"):
-        # redis_.delete(key)
-        # print(key ,redis_.type(key))
-        if redis_.type(key) == "string":
-            print(key,redis_.get(key))
-        elif redis_.type(key) == "set":
-            print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
-        elif redis_.type(key) =="list":
-            print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+    # for key in redis_.keys("*"):
+    #     # redis_.delete(key)
+    #     # print(key ,redis_.type(key))
+    #     if redis_.type(key) == "string":
+    #         print(key,redis_.get(key))
+    #     elif redis_.type(key) == "set":
+    #         print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
+    #     elif redis_.type(key) =="list":
+    #         print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
     # delete_downloads()
     #
-    # website_info("aspbs")
+
+    website_info("MaryAnn")
     # delte_website("MaryAnn")
 
 

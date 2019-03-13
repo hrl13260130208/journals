@@ -123,6 +123,7 @@ class article(common_article):
             if table.find("table") == None:
                 tt = table.find("tr").find("td").get_text()
                 if tt.find("Volume") != -1 and tt.find("Number") != -1:
+
                     trs = table.find_all("tr")
                     for i in range(trs.__len__()):
                         volume = -1
@@ -134,23 +135,43 @@ class article(common_article):
                                 no = re.search("\d+/*\d*", re.search("Number.+\d+/*\d*", b_string).group()).group()
 
                         nos=False
+
                         if no !=-1:
+                            # print(no.find("/") != -1, no, volume)
                             if no.find("/")!=-1:
+                                # print("++++++++++++")
                                 n=no.split("/")
                                 iss=journal_temp[Row_Name.ISSUE].split("/")
-                                if int(n[0]) ==int(iss[0]):
-                                    nos=int(no[1])==int(iss[1])
+                                if int(n[0]) ==int(iss[0]) and int(n[1])==int(iss[1]) :
+                                    nos=True
+                                    # print("=============")
+                                else:
+                                    # print("-----------")
+                                    continue
+                            elif journal_temp[Row_Name.ISSUE].find("/")!=-1:
+                                continue
                             else:
                                 nos=int(no) == int(journal_temp[Row_Name.ISSUE])
 
                             if int(volume) == int(journal_temp[Row_Name.VOLUME]) and nos:
+
                                 for p in trs[i + 1].find_all("p", class_="sans-12"):
                                     article_info = dict(journal_temp)
-                                    a = p.find("a")
+                                    a = p.find_all("a")
                                     if a ==None:
                                         continue
-                                    article_info[Row_Name.TEMP_AURL]=a["href"]
-                                    # print(article_info)
+                                    for a_tag in a :
+                                        text=a_tag.get_text()
+                                        if text.find("Abstract")!=-1 or text.find("Full")!=-1 or text.find("Article]")!=-1:
+                                            # print(a_tag["href"]!="v",a_tag["href"])
+                                            if a_tag["href"]!="v":
+                                                if a_tag["href"].count("http")>1:
+                                                    continue
+                                                article_info[Row_Name.TEMP_AURL]=a_tag["href"]
+                                                break
+                                            else:
+                                                continue
+                                    print(article_info)
                                     urls.append(article_info)
 
                                 break
@@ -160,23 +181,38 @@ class article(common_article):
         time.sleep(random.random() * 3)
         data_s = requests.get(article_info[Row_Name.TEMP_AURL])
         bs_c = BeautifulSoup(data_s.text, "html.parser")
+        urls = []
+        ais.clear()
+        try:
+            div = bs_c.find("div", id="issuesinfo")
+            find = False
 
-        div = bs_c.find("div", id="issuesinfo")
-        find = False
-        urls=[]
-        for li in div.find_all("li"):
-            if li.find("strong") != None:
-                num = re.search("\d+", re.search("Volume.*\d+", li.get_text()).group()).group()
-                if int(num) ==int( article_info[Row_Name.VOLUME]):
-                    find = True
-                elif find:
-                    break
-            if find:
-                a = li.find("a")
-                if a != None:
-                    issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
-                    if int(issue_num) == int(article_info[Row_Name.ISSUE]):
-                        urls=self.do_back_first("https://www.ingentaconnect.com/" + a["href"],article_info)
+            for li in div.find_all("li"):
+                if li.find("strong") != None:
+                    num = re.search("\d+", re.search("Volume.*\d+", li.get_text()).group()).group()
+                    if int(num) ==int( article_info[Row_Name.VOLUME]):
+                        find = True
+                    elif find:
+                        break
+                if find:
+                    a = li.find("a")
+                    if a != None:
+                        if article_info[Row_Name.ISSUE].find("/")!=-1:
+                            if li.get_text().find("-")!=-1:
+                                issue_nums = re.findall("\d+", re.search("Numbers.*\d+-\d+",li.get_text()).group())
+
+                                if int(issue_nums[0])== int(article_info[Row_Name.ISSUE].split("/")[0]):
+                                    urls = self.do_back_first("https://www.ingentaconnect.com/" + a["href"],
+                                                              article_info)
+                        else:
+                            issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
+
+                            if int(issue_num) == int(article_info[Row_Name.ISSUE]):
+                                urls=self.do_back_first("https://www.ingentaconnect.com/" + a["href"],article_info)
+        except:
+            logger.info("没有找到对应的期刊！")
+            urls=self.do_back_first(article_info[Row_Name.TEMP_AURL],article_info)
+
 
         for url in urls:
             try:
@@ -256,12 +292,13 @@ class article(common_article):
 
                     [s.extract() for s in p1.find_all("strong")]
                     for name in p1.get_text().split(";"):
-                        num = re.search("\d+", name)
+                        nums = re.findall("\d+", name)
                         af = ""
                         aa = ""
 
-                        if num != None:
+                        if nums.__len__() > 0:
                             has_af = True
+                            num = re.search(nums[nums.__len__() - 1], name)
                             name = name[:num.start()]
                             af_aa = author_aff[int(num.group())]
                             ps = af_aa.split(",")
@@ -307,28 +344,22 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    job = jobs()
-    job.run_single_website("aspbs")
-    # issue_info = {}
-    # url="http://www.aspbs.com/ctn.html"
-    #
-    # time.sleep(random.random() * 3)
-    #
-    # data = requests.get(url)
-    # bs = BeautifulSoup(data.text, "html.parser")
-    # print(bs)
-    # for a in bs.find_all("a"):
-    #     a_string = a.get_text().strip().replace("\n", " ").replace("\r", " ")
-    #     # print(a_string)
-    #     if a_string.find("Vol") != -1:
-    #
-    #         issue_info[Row_Name.VOLUME] = re.search("\d+", re.search("Vol.+\d+", a_string).group()).group()
-    #         issue_info[Row_Name.ISSUE] = re.search("\d+/*\d*", re.search("N.+\d+/*\d*", a_string).group()).group()
-    #         cdate = re.search("\(.+\d{4}\)", a_string).group()[1:-1]
-    #         issue_info[Row_Name.STRING_COVER_DATE] = cdate
-    #         issue_info[Row_Name.YEAR] = cdate[-4:]
-    #         issue_info[Row_Name.TEMP_URL] = "http://www.aspbs.com/" + a["href"]
-    #
-    #         print(issue_info)
+
+    # job = jobs()
+    # job.run_single_website("aspbs")
+
+
+    url="https://www.ingentaconnect.com/content/asp"
+    data=requests.get(url)
+    bs = BeautifulSoup(data.text, "html.parser")
+    ul=bs.find("ul",class_="bobby")
+    for li in ul.find_all("li",class_="journalTitle"):
+        a=li.find("a")
+        url_s="https://www.ingentaconnect.com"+a["href"]
+        print(url_s+"#"+a.get_text().replace("\n",""))
+
+
+    # article_info={}
+
 
 

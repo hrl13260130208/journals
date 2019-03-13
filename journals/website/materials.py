@@ -34,23 +34,26 @@ class journals(common_journals):
 
                 for table_s in bs_s.find_all("table"):
                     if table_s.find("table") == None:
-                        tt = table_s.find("tr").find("td").get_text().replace("\n","").replace("\r","")
+                        print(table_s)
+                        for tr in table_s.find_all("tr"):
+                            tt = tr.find("td").get_text().replace("\n","").replace("\r","")
 
-                        if tt.find("Volume") != -1 and tt.find("Number") != -1:
-                            issue_info = dict(journal_common_info)
-                            volume = re.search("\d+", re.search("Vol.+\d+", tt).group()).group()
-                            no = re.search("\d+", re.search("Number.+\d+", tt).group()).group()
-                            cdate = re.search("\(.+\d{4}\)", tt).group()
-                            year = re.search("\d+",cdate).group()
+                            if tt.find("Volume") != -1 and tt.find("Number") != -1:
+                                print(tt)
+                                issue_info = dict(journal_common_info)
+                                volume = re.search("\d+", re.search("Vol.+\d+", tt).group()).group()
+                                no = re.search("\d+", re.search("Number.+\d+", tt).group()).group()
+                                cdate = re.search("\(.+\d{4}\)", tt).group()
+                                year = re.search("\d+",cdate).group()
 
-                            issue_info[Row_Name.YEAR]=year
-                            issue_info[Row_Name.VOLUME]=volume
-                            issue_info[Row_Name.ISSUE]=no
-                            issue_info[Row_Name.TEMP_URL]=url_s
-                            issue_info[Row_Name.STRING_COVER_DATE] = cdate
-                            print(issue_info)
-                            if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
-                                self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
+                                issue_info[Row_Name.YEAR]=year
+                                issue_info[Row_Name.VOLUME]=volume
+                                issue_info[Row_Name.ISSUE]=no
+                                issue_info[Row_Name.TEMP_URL]=url_s
+                                issue_info[Row_Name.STRING_COVER_DATE] = cdate[1:-1]
+                                print(issue_info)
+                                if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
+                                    self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
     def get_common(self,journal,url):
         info={}

@@ -4,9 +4,8 @@ from configparser import ConfigParser
 import threading
 import json
 import logging
-import openpyxl
 from  journals.common import Row_Name
-import requests
+
 
 
 logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -53,6 +52,14 @@ class spider(threading.Thread):
             self.run_article(pyfile,s[0])
 
     def run_journal(self,pyfile,website,journal,url):
+        '''
+        爬取期刊信息，使用反射执行对应网站的python文件的journals的run方法
+        :param pyfile: python文件名
+        :param website:
+        :param journal:
+        :param url:
+        :return:
+        '''
         logger.info("爬取 " + journal + " 期刊级别的信息...")
         c = getattr(pyfile, "journals")
         c_instance = c()
@@ -60,6 +67,13 @@ class spider(threading.Thread):
         m(website, journal,url)
 
     def run_article(self,pyfile,journal):
+        '''
+        爬取文章信息，使用反射执行对应网站的python文件的article的run方法
+        :param pyfile:
+        :param journal:
+        :return:
+        '''
+
         logger.info("爬取 " + journal+ " 文章级别的信息...")
         ca = getattr(pyfile, "article")
         ca_instance = ca()
@@ -279,8 +293,8 @@ if __name__ == '__main__':
 
    # excel_rw.create_and_save_execel("aspbs")
 
-    path="C:/execl/20190307/article.txt"
-    # url="http://www.aspbs.com/JBN/contents_jbn2018.htm#v14n6"
+    path="C:/execl/20190312_b/article.txt"
+    # url="http://www.aspbs.com/science/contents-science2018.htm#241"
     # run_article_error_test(path,url)
     run_article_error(path)
 
