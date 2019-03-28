@@ -17,17 +17,14 @@ class website(common_website):
 
         time.sleep(random.random() * 3)
         data = requests.get(url)
-        soup = BeautifulSoup(data.text, "html.parser")
-        td = soup.find("td", width="155")
-        div = td.find("div")
-        for a in div.find_all("a"):
-            if a["href"].find("http")!=-1:
-                url=a["href"]
-            else:
-                url = "http://www.aspbs.com/" + a["href"]
-            title = a.get_text().strip().replace("\n", " ").replace("\r", " ")
+        bs = BeautifulSoup(data.text, "html.parser")
+        ul = bs.find("ul", class_="bobby")
+        for li in ul.find_all("li", class_="journalTitle"):
+            a = li.find("a")
+            url_s = "https://www.ingentaconnect.com" + a["href"]
+            title= a.get_text().replace("\n", "")
 
-            self.set_list(title, url)
+            self.set_list(title, url_s)
 
 class journals(common_journals):
 
@@ -344,19 +341,51 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-
+    pass
     # job = jobs()
     # job.run_single_website("aspbs")
+    # article_info={}
+    # url = "https://www.ingentaconnect.com/content/asp"
+    # data_s = requests.get(url)
+    # bs_c = BeautifulSoup(data_s.text, "html.parser")
+    # urls = []
+    #
+    # try:
+    #     div = bs_c.find("div", id="issuesinfo")
+    #     find = False
+    #
+    #     for li in div.find_all("li"):
+    #         if li.find("strong") != None:
+    #             num = re.search("\d+", re.search("Volume.*\d+", li.get_text()).group()).group()
+    #             if int(num) == int(article_info[Row_Name.VOLUME]):
+    #                 find = True
+    #             elif find:
+    #                 break
+    #         if find:
+    #             a = li.find("a")
+    #             if a != None:
+    #                 if article_info[Row_Name.ISSUE].find("/") != -1:
+    #                     if li.get_text().find("-") != -1:
+    #                         issue_nums = re.findall("\d+", re.search("Numbers.*\d+-\d+", li.get_text()).group())
+    #
+    #                         if int(issue_nums[0]) == int(article_info[Row_Name.ISSUE].split("/")[0]):
+    #                             pass
+    #                             # urls = do_back_first("https://www.ingentaconnect.com/" + a["href"],
+    #                             #                           article_info)
+    #                 else:
+    #                     issue_num = re.search("\d+", re.search("Number.*\d+", li.get_text()).group()).group()
+    #
+    #                     # if int(issue_num) == int(article_info[Row_Name.ISSUE]):
+    #                     #     pass
 
-
-    url="https://www.ingentaconnect.com/content/asp"
-    data=requests.get(url)
-    bs = BeautifulSoup(data.text, "html.parser")
-    ul=bs.find("ul",class_="bobby")
-    for li in ul.find_all("li",class_="journalTitle"):
-        a=li.find("a")
-        url_s="https://www.ingentaconnect.com"+a["href"]
-        print(url_s+"#"+a.get_text().replace("\n",""))
+    # url="https://www.ingentaconnect.com/content/asp"
+    # data=requests.get(url)
+    # bs = BeautifulSoup(data.text, "html.parser")
+    # ul=bs.find("ul",class_="bobby")
+    # for li in ul.find_all("li",class_="journalTitle"):
+    #     a=li.find("a")
+    #     url_s="https://www.ingentaconnect.com"+a["href"]
+    #     print(url_s+"#"+a.get_text().replace("\n",""))
 
 
     # article_info={}

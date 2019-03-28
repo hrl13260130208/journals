@@ -40,7 +40,7 @@ def create_and_save_execel(section):
     line=2
     write_first_line(sheet)
     while (True):
-        article_data = name_manager().get_article_data()
+        article_data = name_manager().get_article_data(section)
         if article_data == None:
             break
         article = json.loads(article_data)

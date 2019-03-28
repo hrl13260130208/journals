@@ -106,13 +106,16 @@ class common_article:
                 break
             journal_temp = json.loads(temp_data)
             ais=self.do_run(journal_temp)
+            self.save_data(ais,journal_temp)
 
-            if ais !=None:
-                for info in ais:
-                    self.nm.save_article_data(json.dumps(info))
+    def save_data(self,ais,journal_temp):
+        if ais != None:
+            for info in ais:
+                print(info[Row_Name.PUBLISHER])
+                self.nm.save_article_data(info[Row_Name.PUBLISHER], json.dumps(info))
 
-                self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
-                                               journal_temp[Row_Name.ISSUE])
+            self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
+                                           journal_temp[Row_Name.ISSUE])
 
 
     def do_run(self,journal_temp):

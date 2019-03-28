@@ -48,12 +48,12 @@ class name_manager:
         '''
         return  journal+"_temp_data"
 
-    def create_article_data_name(self):
+    def create_article_data_name(self,website):
         '''
         创建存储文章信息的list的名称
         :return:
         '''
-        return  "article_data_list"
+        return  website+"article_data_list"
 
     def create_journal_error_message_name(self):
         '''
@@ -136,11 +136,11 @@ class name_manager:
             return not redis_.sismember(self.create_download_schedule_name(journal), volume + "_" + issue)
 
 
-    def save_article_data(self,data):
-        redis_.lpush(self.create_article_data_name(),data)
+    def save_article_data(self,website,data):
+        redis_.lpush(self.create_article_data_name(website),data)
 
-    def get_article_data(self):
-        return redis_.lpop(self.create_article_data_name())
+    def get_article_data(self,website):
+        return redis_.lpop(self.create_article_data_name(website))
 
     def save_journal_error_message(self,message):
         redis_.lpush(self.create_journal_error_message_name(),message)
@@ -236,19 +236,19 @@ def delete_downloads():
     redis_.delete("article_error_massage_list")
 
 if __name__ == '__main__':
-    for key in redis_.keys("*"):
-        # redis_.delete(key)
-        # print(key ,redis_.type(key))
-        if redis_.type(key) == "string":
-            print(key,redis_.get(key))
-        elif redis_.type(key) == "set":
-            print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
-        elif redis_.type(key) =="list":
-            print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+    # for key in redis_.keys("*"):
+    #     redis_.delete(key)
+    #     # print(key ,redis_.type(key))
+    #     if redis_.type(key) == "string":
+    #         print(key,redis_.get(key))
+    #     elif redis_.type(key) == "set":
+    #         print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
+    #     elif redis_.type(key) =="list":
+    #         print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
     # delete_downloads()
     #
     #
-    # website_info("MaryAnn")
+    website_info("MaryAnn")
     # delete_website("MaryAnn")
 
 
