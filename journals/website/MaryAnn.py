@@ -56,13 +56,18 @@ class journals(common_journals):
 
     def get(self,website,journal,url):
         journal_common_info=self.get_common(journal,url)
-        journal_common_info[Row_Name.JOURNAL_TITLE] = journal
-        if website.find("  ")!=-1:
-            journal_common_info[Row_Name.PUBLISHER]=website[:website.find("  ")]
+
+        if journal.find("  ")!=-1:
+            journal_common_info[Row_Name.JOURNAL_TITLE] = journal[:journal.find("  ")]
+        else:
+            journal_common_info[Row_Name.JOURNAL_TITLE] = journal
+        journal_common_info[Row_Name.PUBLISHER] = website
         wait()
         data = requests.get(url)
+        print(data.text)
         bs = BeautifulSoup(data.text, "html.parser")
         div = bs.find("div", class_="loi tab loi-tab-2")
+        print(div)
         ul = div.find("ul", class_="rlist tab__content")
         for li in ul.find_all("li", class_="col-md-4"):
             issue_info = dict(journal_common_info)
@@ -128,30 +133,19 @@ class article(common_article):
                     [s.extract() for s in li.find("span")]
                     strs = li.get_text().split("–")
                     try:
-                        article_info[Row_Name.START_PAGE] = strs[0]
-                        if strs.__len__() > 1:
-                            article_info[Row_Name.END_PAGE] = strs[1]
-                            article_info[Row_Name.PAGE_TOTAL] = int(strs[1]) - int(strs[0]) + 1
-                        else:
-                            article_info[Row_Name.END_PAGE] = strs[0]
-                            article_info[Row_Name.PAGE_TOTAL] = 1
-
+                        article_info[Row_Name.START_PAGE] = int(strs[0])
+                        article_info[Row_Name.END_PAGE] = int(strs[1])
+                        article_info[Row_Name.PAGE_TOTAL] = article_info[Row_Name.END_PAGE] - article_info[
+                            Row_Name.START_PAGE] + 1
                     except:
-                        string1 = strs[0]
-                        string2 = strs[1]
-                        if strs[0].find("-") != -1:
-                            string1 = strs[0].split("-")[1]
-                        if strs[1].find("-") != -1:
-                            string2 = strs[1].split("-")[1]
-
-                        string1 = re.search("\d+", string1).group()
-                        string2 = re.search("\d+", string2).group()
-
+                        article_info[Row_Name.START_PAGE] = strs[0]
+                        article_info[Row_Name.END_PAGE] = strs[1]
+                        num_0=re.search("\d+",strs[0])
+                        num_1=re.search("\d+",strs[1])
                         try:
-                            num_2 = int(string2) - int(string1) + 1
-
-                            if num_2 > 0:
-                                article_info[Row_Name.PAGE_TOTAL] = num_2
+                            num_2=int(strs[1][num_1.span()[0]:num_1.span()[1]])-int(strs[0][num_0.span()[0]:num_0.span()[1]])+1
+                            if num_2>0:
+                                article_info[Row_Name.PAGE_TOTAL]=num_2
                         except:
                             pass
 
@@ -172,10 +166,12 @@ class article(common_article):
         self.set_not_none_item(article_info, Row_Name.ARTICLE_TYPE, article_type["content"])
 
         article_doi = bs_c.find("meta", {"scheme": "doi"})
-        self.set_not_none_item(article_info, Row_Name.DOI, article_doi["content"])
+        if article_doi !=None:
+            article_info[ Row_Name.DOI]=article_doi["content"]
 
         article_title = bs_c.find("meta", {"name": "dc.Title"})
-        self.set_not_none_item(article_info, Row_Name.TITLE, article_title["content"])
+        if article_title !=None:
+            article_info[Row_Name.TITLE]= article_title["content"]
 
         article_language = bs_c.find("meta", {"name": "dc.Language"})
         self.set_not_none_item(article_info, Row_Name.LANGUAGE, article_language["content"])
@@ -209,26 +205,37 @@ class article(common_article):
         em_string = ""
         af_string = ""
         co_string = ""
+        ans = {}
+
         has_af = False
         has_em = False
         div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
-                       + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
+        # print(div_a)
+        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+                       + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
             a = div_tag.find("a", href="#")
+            if a["title"].strip() in ans:
+                continue
+            else:
+                ans[a["title"].strip()] = 1
             an_string += a["title"].strip() + "##"
             div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
             [s.extract() for s in div_s.find("div", class_="bottom-info")]
             af = ""
             aa = ""
             em = "$$"
-            # print("================", a["title"].strip())
+            print(div_tag)
+            print("================", a["title"].strip())
             for p in div_s.find_all("p"):
-                # print(p)
+                print(p)
+                [s.extract() for s in p.find_all("p")]
                 p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-                if p.find("Address correspondence to:") != -1:
+
+                if p.lower().find("correspondence") != -1:
                     co_string += p
                 elif p.find("E-mail Address:") != -1:
                     has_em = True
+                    print(p)
                     if em.find("$$") != -1:
                         em = p.split(":")[1].strip()
                     else:
@@ -237,7 +244,7 @@ class article(common_article):
                         co_string += p
                 elif p != "":
                     af += p + ";"
-                    # print("+++++++++++++++", af)
+                    print("+++++++++++++++", af)
             em_string += em + "##"
             if af == "":
                 af_string += "$$##"
@@ -267,62 +274,73 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    pass
     # job=jobs()
     # job.run_single_website("MaryAnn")
 
-    # journal_temp={}
-    # url="https://www.liebertpub.com/toc/end/32/S2"
-    #
-    # data = requests.get(url)
-    # bs = BeautifulSoup(data.text, "html.parser")
-    #
-    # div = bs.find("div", class_="table-of-content")
-    # for i in div.find_all("div", class_="issue-item"):
-    #
-    #     article_info = dict(journal_temp)
-    #     # i=div.find("div",class_="issue-item")
-    #     title = i.find("h5")
-    #     article_url = title.find("a")["href"]
-    #     article_info[Row_Name.TEMP_AURL] = "https://www.liebertpub.com" + article_url
-    #
-    #     article_start_page = i.find("ul", class_="rlist--inline separator toc-item__detail")
-    #     for li in article_start_page.find_all("li"):
-    #         if li.get_text().find("Page") != -1:
-    #             [s.extract() for s in li.find("span")]
-    #             strs = li.get_text().split("–")
-    #             try:
-    #                 article_info[Row_Name.START_PAGE] = strs[0]
-    #                 if strs.__len__()>1:
-    #                     article_info[Row_Name.END_PAGE] = strs[1]
-    #                     article_info[Row_Name.PAGE_TOTAL] = int(strs[1]) - int(strs[0]) + 1
-    #                 else:
-    #                     article_info[Row_Name.END_PAGE] = strs[0]
-    #                     article_info[Row_Name.PAGE_TOTAL] = 1
-    #
-    #             except:
-    #                 # article_info[Row_Name.START_PAGE] = strs[0]
-    #                 # article_info[Row_Name.END_PAGE] = strs[1]
-    #                 string1=strs[0]
-    #                 string2=strs[1]
-    #                 if strs[0].find("-")!=-1 :
-    #                     string1=strs[0].split("-")[1]
-    #                 if strs[1].find("-")!=-1 :
-    #                     string2=strs[1].split("-")[1]
-    #
-    #                 string1= re.search("\d+",string1).group()
-    #                 string2 = re.search("\d+", string2).group()
-    #
-    #                 try:
-    #                     num_2 = int(string2) - int(string1) + 1
-    #
-    #                     if num_2 > 0:
-    #                         article_info[Row_Name.PAGE_TOTAL] = num_2
-    #                 except:
-    #                     pass
-    #
-    #
-    #     print(article_info)
+    article_info={}
+    url="https://www.liebertpub.com/doi/10.1089/wound.2018.0824"
+
+    data_s = requests.get(url)
+    bs_c = BeautifulSoup(data_s.text, "html.parser")
+    an_string = ""
+    em_string = ""
+    af_string = ""
+    co_string = ""
+    ans={}
+
+    has_af = False
+    has_em = False
+    div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+    # print(div_a)
+    for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+                   + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
+        a = div_tag.find("a", href="#")
+        if a["title"].strip() in ans:
+            continue
+        else:
+            ans[a["title"].strip()]=1
+        an_string += a["title"].strip() + "##"
+        div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+        [s.extract() for s in div_s.find("div", class_="bottom-info")]
+        af = ""
+        aa = ""
+        em = "$$"
+        print(div_tag)
+        print("================", a["title"].strip())
+        for p in div_s.find_all("p"):
+            print(p)
+            [s.extract() for s in p.find_all("p")]
+            p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+
+            if p.lower().find("correspondence") != -1:
+                co_string += p
+            elif p.find("E-mail Address:") != -1:
+                has_em = True
+                print(p)
+                if em.find("$$") != -1:
+                    em = p.split(":")[1].strip()
+                else:
+                    em += ";" + p.split(":")[1].strip()
+                if p.find(em) == -1:
+                    co_string += p
+            elif p != "":
+                af += p + ";"
+                print("+++++++++++++++", af)
+        em_string += em + "##"
+        if af == "":
+            af_string += "$$##"
+        else:
+            af_string += af[:-1] + "##"
+            has_af = True
+
+    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    if has_em:
+        article_info[Row_Name.EMAIL] = em_string[:-2]
+    if has_af:
+        article_info[Row_Name.AFFILIATION] = af_string[:-2]
+
+    article_info[Row_Name.CORRESPONDING] = co_string
+    print(article_info)
 
 
 
