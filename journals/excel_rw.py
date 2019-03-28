@@ -7,7 +7,8 @@ import time
 import json
 from journals.redis_manager import name_manager
 from journals.common import Row_Name
-import re
+import requests
+from bs4 import BeautifulSoup
 
 
 
@@ -98,26 +99,96 @@ def write_log(num,file_path):
         file.write(temp_data+"\n")
 
 def update_excel():
-    execl = openpyxl.load_workbook("C:/execl/提交/wc_hrl_future_20190309_1_20190309.xlsx")
+    execl = openpyxl.load_workbook("C:/execl/temp/wc_hrl_MaryAnn_20190315_1_20190315.xlsx")
     sheet = execl.get_sheet_by_name("sheet1")
     # print(sheet.cell(3,Row_Name.COLUME_NUM[Row_Name.AFFILIATION]+1).value)
 
     for i in sheet.rows:
-        em = i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value
-        co = i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value
-        # print(em,co)
-        if co != None:
-            co = co.replace("*", "").replace("E-mail Address:", "")
-        if em != None:
-            em = em.replace("E-mail Address", "")
-            for e in em.split("##"):
-                if e != "$$":
-                    co = co.replace(e.strip(), "")
-                    co += e
-        i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value = em
-        i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value = co
+        jt = i[Row_Name.COLUME_NUM[Row_Name.JOURNAL_TITLE]].value
+        url = i[Row_Name.COLUME_NUM[Row_Name.ABS_URL]].value
+        if url=="abs_url":
+            continue
 
-    execl.save("C:/execl/wc_hrl_future_20190309_1_20190309.xlsx")
+        if jt.find("  ")!=-1:
+            i[Row_Name.COLUME_NUM[Row_Name.JOURNAL_TITLE]].value = jt[:jt.find("  ")]
+        try:
+            # time.sleep(1)
+            data_s = requests.get(url)
+            bs_c = BeautifulSoup(data_s.text, "html.parser")
+            an_string = ""
+            em_string = ""
+            af_string = ""
+            co_string = ""
+            ans = {}
+
+            has_af = False
+            has_em = False
+            div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+            # print(div_a)
+            for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+                           + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
+                a = div_tag.find("a", href="#")
+                if a["title"].strip() in ans:
+                    continue
+                else:
+                    ans[a["title"].strip()] = 1
+                an_string += a["title"].strip() + "##"
+                div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+                [s.extract() for s in div_s.find("div", class_="bottom-info")]
+                af = ""
+                aa = ""
+                em = "$$"
+                print(div_tag)
+                print("================", a["title"].strip())
+                for p in div_s.find_all("p"):
+                    print(p)
+                    [s.extract() for s in p.find_all("p")]
+                    p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+
+                    if p.lower().find("correspondence") != -1:
+                        co_string += p
+                    elif p.find("E-mail Address:") != -1:
+                        has_em = True
+                        print(p)
+                        if em.find("$$") != -1:
+                            em = p.split(":")[1].strip()
+                        else:
+                            em += ";" + p.split(":")[1].strip()
+                        if p.find(em) == -1:
+                            co_string += p
+                    elif p != "":
+                        af += p + ";"
+                        print("+++++++++++++++", af)
+                em_string += em + "##"
+                if af == "":
+                    af_string += "$$##"
+                else:
+                    af_string += af[:-1] + "##"
+                    has_af = True
+
+            i[Row_Name.COLUME_NUM[Row_Name.AUTHOR_NAME]].value = an_string[:-2]
+            if has_em:
+                i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value = em_string[:-2]
+            if has_af:
+                i[Row_Name.COLUME_NUM[Row_Name.AFFILIATION]].value = af_string[:-2]
+
+                i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value = co_string
+        except:
+            pass
+
+        # print(em,co)
+        # if co != None:
+        #     co = co.replace("*", "").replace("E-mail Address:", "")
+        # if em != None:
+        #     em = em.replace("E-mail Address", "")
+        #     for e in em.split("##"):
+        #         if e != "$$":
+        #             co = co.replace(e.strip(), "")
+        #             co += e
+        # i[Row_Name.COLUME_NUM[Row_Name.EMAIL]].value = em
+        # i[Row_Name.COLUME_NUM[Row_Name.CORRESPONDING]].value = co
+
+    execl.save("C:/execl/wc_hrl_MaryAnn_20190315_1_20190315.xlsx")
 
 
 if __name__ == '__main__':
@@ -127,8 +198,8 @@ if __name__ == '__main__':
     # sheet=wb.create_sheet("sheet1",0)
     # sheet.cell(1,1,1)
     # wb.save(EXECEL_PATH+"ts.xlsx")
-
-    pass
+    update_excel()
+    # pass
 
 
     #     if pt ==None:

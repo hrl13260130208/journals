@@ -8,7 +8,7 @@ import json
 REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
 # REDIS_DB="2" #MaryAnn
-# REDIS_DB="10" #aspbs
+# REDIS_DB="10" #future
 REDIS_DB="11" #aspbs test
 
 
@@ -17,7 +17,7 @@ redis_ = redis.Redis(host=REDIS_IP, port=REDIS_PORT, db=REDIS_DB, decode_respons
 class name_manager:
     def create_website_journal_set_name(self,website):
         '''
-        创建网站下存储期刊名与url的set的名称
+        创建网站下存储期刊名与url的set1的名称
         :param website:
         :return:
         '''

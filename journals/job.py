@@ -161,6 +161,8 @@ def run_article_error_test(file,url):
             list=json.loads(line)
             dict = json.loads(list[1])
             # dict = list[1]
+            if not Row_Name.PUBLISHER in dict:
+                dict[Row_Name.PUBLISHER]="MaryAnn"
             if list[0] =="first":
                 if dict[Row_Name.TEMP_URL] == url:
                     pyfile = __import__("journals.website." + dict[Row_Name.PUBLISHER], fromlist=True)
@@ -235,7 +237,12 @@ def run_article_error(file):
         if Row_Name.ISSN in temp:
             new_dict[Row_Name.ISSN]=temp[Row_Name.ISSN]
         new_dict[Row_Name.JOURNAL_TITLE]=temp[Row_Name.JOURNAL_TITLE]
-        new_dict[Row_Name.PUBLISHER]=temp[Row_Name.PUBLISHER]
+        # new_dict[Row_Name.PUBLISHER]=temp[Row_Name.PUBLISHER]
+        if not Row_Name.PUBLISHER in new_dict:
+            new_dict[Row_Name.PUBLISHER] = "MaryAnn"
+        else:
+            new_dict[Row_Name.PUBLISHER] = temp[Row_Name.PUBLISHER]
+
         new_dict[Row_Name.STRING_COVER_DATE]=temp[Row_Name.STRING_COVER_DATE]
         new_dict[Row_Name.YEAR]=temp[Row_Name.YEAR]
         new_dict[Row_Name.VOLUME]=temp[Row_Name.VOLUME]
@@ -279,14 +286,15 @@ if __name__ == '__main__':
 
    # excel_rw.create_and_save_execel("aspbs")
 
-    path="C:/execl/20190312_t/article.txt"
-    # url="https://www.futuremedicine.com/doi/10.2217/rme-2018-1308s"
-    # run_article_error_test(path,url)
-    run_article_error(path)
+    path="C:/execl/temp/20190318/article.txt"
+    url="https://www.liebertpub.com/doi/10.1089/jpm.2018.0613"
+    run_article_error_test(path,url)
+    # run_article_error(path)
 
-    # path="C:/execl/20190306/journal.txt"
-    # url="http://www.aspbs.com/ctn.html"
-    # run_journal_error_test(path,url)
+    # path="C:/execl/20190315/journal.txt"
+    # # url="http://www.aspbs.com/ctn.html"
+    # # run_journal_error_test(path,url)
+    # run_journal_error(path)
     # config=configs()
     # for item in config.read_items("single"):
     #     print(item)

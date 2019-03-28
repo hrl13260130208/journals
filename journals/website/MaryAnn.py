@@ -56,13 +56,18 @@ class journals(common_journals):
 
     def get(self,website,journal,url):
         journal_common_info=self.get_common(journal,url)
-        journal_common_info[Row_Name.JOURNAL_TITLE] = journal
-        if website.find("  ")!=-1:
-            journal_common_info[Row_Name.PUBLISHER]=website[:website.find("  ")]
+
+        if journal.find("  ")!=-1:
+            journal_common_info[Row_Name.JOURNAL_TITLE] = journal[:journal.find("  ")]
+        else:
+            journal_common_info[Row_Name.JOURNAL_TITLE] = journal
+        journal_common_info[Row_Name.PUBLISHER] = website
         wait()
         data = requests.get(url)
+        print(data.text)
         bs = BeautifulSoup(data.text, "html.parser")
         div = bs.find("div", class_="loi tab loi-tab-2")
+        print(div)
         ul = div.find("ul", class_="rlist tab__content")
         for li in ul.find_all("li", class_="col-md-4"):
             issue_info = dict(journal_common_info)
@@ -161,10 +166,12 @@ class article(common_article):
         self.set_not_none_item(article_info, Row_Name.ARTICLE_TYPE, article_type["content"])
 
         article_doi = bs_c.find("meta", {"scheme": "doi"})
-        self.set_not_none_item(article_info, Row_Name.DOI, article_doi["content"])
+        if article_doi !=None:
+            article_info[ Row_Name.DOI]=article_doi["content"]
 
         article_title = bs_c.find("meta", {"name": "dc.Title"})
-        self.set_not_none_item(article_info, Row_Name.TITLE, article_title["content"])
+        if article_title !=None:
+            article_info[Row_Name.TITLE]= article_title["content"]
 
         article_language = bs_c.find("meta", {"name": "dc.Language"})
         self.set_not_none_item(article_info, Row_Name.LANGUAGE, article_language["content"])
@@ -198,26 +205,37 @@ class article(common_article):
         em_string = ""
         af_string = ""
         co_string = ""
+        ans = {}
+
         has_af = False
         has_em = False
         div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
-                       + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
+        # print(div_a)
+        for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+                       + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
             a = div_tag.find("a", href="#")
+            if a["title"].strip() in ans:
+                continue
+            else:
+                ans[a["title"].strip()] = 1
             an_string += a["title"].strip() + "##"
             div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
             [s.extract() for s in div_s.find("div", class_="bottom-info")]
             af = ""
             aa = ""
             em = "$$"
+            print(div_tag)
             print("================", a["title"].strip())
             for p in div_s.find_all("p"):
                 print(p)
+                [s.extract() for s in p.find_all("p")]
                 p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-                if p.find("Address correspondence to:") != -1:
+
+                if p.lower().find("correspondence") != -1:
                     co_string += p
                 elif p.find("E-mail Address:") != -1:
                     has_em = True
+                    print(p)
                     if em.find("$$") != -1:
                         em = p.split(":")[1].strip()
                     else:
@@ -256,82 +274,73 @@ class article(common_article):
 
 
 if __name__ == '__main__':
-    job=jobs()
-    job.run_single_website("MaryAnn")
+    # job=jobs()
+    # job.run_single_website("MaryAnn")
 
-    # article_info={}
-    # url="https://www.liebertpub.com/doi/10.1089/jmf.2018.4181"
-    #
-    # data_s = requests.get(url)
-    # bs_c = BeautifulSoup(data_s.text, "html.parser")
-    #
-    # article_keyword = bs_c.find("meta", {"name": "keywords"})
-    # # self.set_possible_none_item(article_info,Row_Name.KEYWORD,article_keyword["content"].replace(",","##"))
-    # if article_keyword != None:
-    #     article_info[Row_Name.KEYWORD] = article_keyword["content"].replace(",", "##")
-    #
-    # for section in bs_c.find_all("section", class_="section"):
-    #     if section.find("strong").get_text() == "Information":
-    #         string = section.find("div").get_text().strip()
-    #         article_info[Row_Name.COPYRIGHT_STATEMENT] = string
-    #         re_s = re.search("[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]{1}|[0-9]{1}[1-9][0-9]{2}|[1-9][0-9]{3}", string)
-    #         if re_s != None:
-    #             article_info[Row_Name.COPYRIGHT_YEAR] = string[re_s.span()[0]:re_s.span()[1]]
-    #         if string.find("Mary Ann") != -1:
-    #             article_info[Row_Name.COPYRIGHT_HOLDER] = "Mary Ann Liebert, Inc"
-    #         else:
-    #             article_info[Row_Name.COPYRIGHT_HOLDER] = string.replace("©", "").replace("Copyright", "").strip()
-    #
-    #
-    #
-    # an_string = ""
-    # em_string = ""
-    # af_string = ""
-    # co_string = ""
-    # has_af = False
-    # has_em = False
-    # div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-    # for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed "}) \
-    #                + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile "}):
-    #     a = div_tag.find("a", href="#")
-    #     an_string += a["title"].strip() + "##"
-    #     div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
-    #     [s.extract() for s in div_s.find("div", class_="bottom-info")]
-    #     af = ""
-    #     aa = ""
-    #     em = "$$"
-    #     print("================", a["title"].strip())
-    #     for p in div_s.find_all("p"):
-    #         print(p)
-    #         p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-    #         if p.find("Address correspondence to:") != -1:
-    #             co_string += p
-    #         elif p.find("E-mail Address:") != -1:
-    #             has_em = True
-    #             if em.find("$$") != -1:
-    #                 em = p.split(":")[1].strip()
-    #             else:
-    #                 em += ";" + p.split(":")[1].strip()
-    #             if p.find(em) == -1:
-    #                 co_string += p
-    #         elif p != "":
-    #             af+=p+";"
-    #             print("+++++++++++++++",af)
-    #     em_string += em + "##"
-    #     if af == "":
-    #         af_string += "$$##"
-    #     else:
-    #         af_string += af[:-1] + "##"
-    #         has_af = True
-    #
-    # article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
-    # if has_em:
-    #     article_info[Row_Name.EMAIL] = em_string[:-2]
-    # if has_af:
-    #     article_info[Row_Name.AFFILIATION] = af_string[:-2]
-    #
-    # article_info[Row_Name.CORRESPONDING] = co_string
-    # print(article_info)
+    article_info={}
+    url="https://www.liebertpub.com/doi/10.1089/wound.2018.0824"
+
+    data_s = requests.get(url)
+    bs_c = BeautifulSoup(data_s.text, "html.parser")
+    an_string = ""
+    em_string = ""
+    af_string = ""
+    co_string = ""
+    ans={}
+
+    has_af = False
+    has_em = False
+    div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+    # print(div_a)
+    for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+                   + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
+        a = div_tag.find("a", href="#")
+        if a["title"].strip() in ans:
+            continue
+        else:
+            ans[a["title"].strip()]=1
+        an_string += a["title"].strip() + "##"
+        div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+        [s.extract() for s in div_s.find("div", class_="bottom-info")]
+        af = ""
+        aa = ""
+        em = "$$"
+        print(div_tag)
+        print("================", a["title"].strip())
+        for p in div_s.find_all("p"):
+            print(p)
+            [s.extract() for s in p.find_all("p")]
+            p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+
+            if p.lower().find("correspondence") != -1:
+                co_string += p
+            elif p.find("E-mail Address:") != -1:
+                has_em = True
+                print(p)
+                if em.find("$$") != -1:
+                    em = p.split(":")[1].strip()
+                else:
+                    em += ";" + p.split(":")[1].strip()
+                if p.find(em) == -1:
+                    co_string += p
+            elif p != "":
+                af += p + ";"
+                print("+++++++++++++++", af)
+        em_string += em + "##"
+        if af == "":
+            af_string += "$$##"
+        else:
+            af_string += af[:-1] + "##"
+            has_af = True
+
+    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    if has_em:
+        article_info[Row_Name.EMAIL] = em_string[:-2]
+    if has_af:
+        article_info[Row_Name.AFFILIATION] = af_string[:-2]
+
+    article_info[Row_Name.CORRESPONDING] = co_string
+    print(article_info)
 
 
 
