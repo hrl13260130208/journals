@@ -159,10 +159,13 @@ class jobs:
 
 
 
-def write_data(pubs):
+def write_data(pubs,*name):
     logger.info("创建并写入execl...")
     for pub_key in pubs.keys():
-        excel_rw.create_and_save_execel(pub_key)
+        if name.__len__() != 0:
+            excel_rw.create_and_save_execel(pub_key,name[0])
+        else:
+            excel_rw.create_and_save_execel(pub_key)
 
     logger.info("生成日志...")
     excel_rw.write_logs()
@@ -226,6 +229,7 @@ def run_journal(pyname,website,journal,url):
     pyfile = __import__("journals.website." + pyname, fromlist=True)
     j_spider.run_journal(pyfile, website, journal, url)
     j_spider.run_article(pyfile, journal)
+    write_data({website:1},journal)
 
     # pyfile = __import__("journals.website." + strs[0], fromlist=True)
     # ac = getattr(pyfile, "journals")
@@ -310,13 +314,28 @@ def set_discontinue_journal(url):
     '''
     name_manager().save_discontiune_journal(url)
 
+def test(s,*s1):
+    print(s)
+    if s1.__len__()!=0:
+        print(s1[0])
+
+
 if __name__ == '__main__':
     # pass
-
+    # test(1,7)
     website="MaryAnn"
-    journal="Videourology™"
-    url="https://www.liebertpub.com/loi/vid"
-    run_journal(website,website,journal,url)
+    # journal = "Journal of Endourology"
+    # url = "https://www.liebertpub.com/loi/end"
+    # run_journal(website, website, journal, url)
+
+    file=open("1",encoding="utf-8")
+    for line in file.readlines():
+        line=line.split("_")
+        journal = line[0]
+        url = line[1].replace("\n","")
+        print(url)
+        print("========")
+        run_journal(website, website, journal, url)
 
 
 

@@ -155,8 +155,9 @@ class common_article:
             logger.error("爬取文章列表出错。错误信息：", exc_info=True)
             message = ["first", json.dumps(journal_temp)]
             self.nm.save_article_error_message(json.dumps(message))
-        if len!=-1 and len==ais.__len__():
-            return ais
+        # if len!=-1 and len==ais.__len__():
+        #     return ais
+        return ais
 
     def first(self,temp_data):
         '''

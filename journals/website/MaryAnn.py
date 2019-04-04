@@ -62,12 +62,13 @@ class journals(common_journals):
         else:
             journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER] = website
+        print("--------------",journal_common_info)
         wait()
         data = requests.get(url)
-        print(data.text)
+        # print(data.text)
         bs = BeautifulSoup(data.text, "html.parser")
         div = bs.find("div", class_="loi tab loi-tab-2")
-        print(div)
+        # print(div)
         ul = div.find("ul", class_="rlist tab__content")
         for li in ul.find_all("li", class_="col-md-4"):
             issue_info = dict(journal_common_info)
@@ -85,6 +86,7 @@ class journals(common_journals):
                     issue_info[Row_Name.TEMP_URL]="https://www.liebertpub.com"+a["href"]
 
             if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
+                print("--------------", issue_info)
                 self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
     def get_common(self,journal,url):
@@ -93,8 +95,28 @@ class journals(common_journals):
 
         if common ==None:
             wait()
-            data = requests.get(url)
+            ha={
+            "authority": "www.liebertpub.com",
+            "method": "GET",
+            "path": "/loi/VOR",
+            "scheme": "https",
+            "upgrade - insecure - requests": "1",
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"
+            }
+            # cookie= {
+            #     I2KBRCK=1; MAID=bTY2/0pIlThlENHcxBGyPQ==; _ga=GA1.2.2018801126.1543481100; gdprCookie=Cookies policy accepted; seerid=86715.61259763717; seerid=86715.61259763717; PathforaImpressions_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048980739; PathforaClosed_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048982823; __atuvc=40%7C9%2C11%7C10%2C4%7C11%2C5%7C12%2C3%7C13; __attag=%22lio%3Aly_unknown_email%2Clio%3Aly_frequent_user%2Clio%3Asmt_power%2Clio%3Aall%2Clio%3A95ee3ae4ffcc3bcb7ff6ee6329a77114_reach%2Clio%3Aaudhighlyengaged%2Clio%3Aaud_unknown_users%22%2Clio%3Aly_unknown_email%2Clio%3Aaud_unknown_users; _gid=GA1.2.1969530633.1553669761; SERVER=WZ6myaEXBLGexQVnui0xrg==; MACHINE_LAST_SEEN=2019-03-27T23%3A54%3A27.951-07%3A00; JSESSIONID=aaaT0kUlxcj7G7WTwxwMw; seerses=e; seerses=e; ly_segs=%7B%22ly_unknown_email%22%3A%22ly_unknown_email%22%2C%22ly_frequent_user%22%3A%22ly_frequent_user%22%2C%22smt_power%22%3A%22smt_power%22%2C%22all%22%3A%22all%22%2C%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%3A%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%2C%22audhighlyengaged%22%3A%22audhighlyengaged%22%2C%22aud_unknown_users%22%3A%22aud_unknown_users%22%7D; cookiePolicy=iaccept; _gat__gaenor=1; PathforaPageView=191
+            # }
+            cookie=" I2KBRCK=1; MAID=bTY2/0pIlThlENHcxBGyPQ==; _ga=GA1.2.2018801126.1543481100; gdprCookie=Cookies policy accepted; seerid=86715.61259763717; seerid=86715.61259763717; PathforaImpressions_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048980739; PathforaClosed_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048982823; __atuvc=40%7C9%2C11%7C10%2C4%7C11%2C5%7C12%2C3%7C13; __attag=%22lio%3Aly_unknown_email%2Clio%3Aly_frequent_user%2Clio%3Asmt_power%2Clio%3Aall%2Clio%3A95ee3ae4ffcc3bcb7ff6ee6329a77114_reach%2Clio%3Aaudhighlyengaged%2Clio%3Aaud_unknown_users%22%2Clio%3Aly_unknown_email%2Clio%3Aaud_unknown_users; _gid=GA1.2.1969530633.1553669761; SERVER=WZ6myaEXBLGexQVnui0xrg==; MACHINE_LAST_SEEN=2019-03-27T23%3A54%3A27.951-07%3A00; JSESSIONID=aaaT0kUlxcj7G7WTwxwMw; seerses=e; seerses=e; ly_segs=%7B%22ly_unknown_email%22%3A%22ly_unknown_email%22%2C%22ly_frequent_user%22%3A%22ly_frequent_user%22%2C%22smt_power%22%3A%22smt_power%22%2C%22all%22%3A%22all%22%2C%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%3A%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%2C%22audhighlyengaged%22%3A%22audhighlyengaged%22%2C%22aud_unknown_users%22%3A%22aud_unknown_users%22%7D; cookiePolicy=iaccept; _gat__gaenor=1; PathforaPageView=191"
+            c = {}
+            for a in cookie.split(";"):
+                a = a.split("=")
+                c[a[0]] = a[1]
+            print(c)
+            data = requests.get(url,headers=ha,cookies=c)
+
+            print(data.status_code)
             bs = BeautifulSoup(data.text, "html.parser")
+            # print(bs)
             div = bs.find("div", class_="text-minute margin-bottom--small")
             div_str = div.get_text().strip()
             for s in div_str.split("|"):
@@ -129,26 +151,30 @@ class article(common_article):
 
             article_start_page = i.find("ul", class_="rlist--inline separator toc-item__detail")
             for li in article_start_page.find_all("li"):
-                if li.get_text().find("Pages:") != -1:
+                if li.get_text().find("Page") != -1:
                     [s.extract() for s in li.find("span")]
                     strs = li.get_text().split("–")
                     try:
-                        article_info[Row_Name.START_PAGE] = int(strs[0])
-                        article_info[Row_Name.END_PAGE] = int(strs[1])
-                        article_info[Row_Name.PAGE_TOTAL] = article_info[Row_Name.END_PAGE] - article_info[
-                            Row_Name.START_PAGE] + 1
+                        start_p = int(strs[0])
+                        if strs.__len__() < 2:
+                            end_p = int(strs[0])
+                        else:
+                            end_p = int(strs[1])
+                        p_t = end_p - start_p + 1
                     except:
-                        article_info[Row_Name.START_PAGE] = strs[0]
-                        article_info[Row_Name.END_PAGE] = strs[1]
-                        num_0=re.search("\d+",strs[0])
-                        num_1=re.search("\d+",strs[1])
+                        start_p = strs[0]
+                        end_p = strs[1]
+                        num_0 = re.search("\d+", strs[0])
+                        num_1 = re.search("\d+", strs[1])
                         try:
-                            num_2=int(strs[1][num_1.span()[0]:num_1.span()[1]])-int(strs[0][num_0.span()[0]:num_0.span()[1]])+1
-                            if num_2>0:
-                                article_info[Row_Name.PAGE_TOTAL]=num_2
+                            p_t = int(strs[1][num_1.span()[0]:num_1.span()[1]]) - int(
+                                strs[0][num_0.span()[0]:num_0.span()[1]])
                         except:
                             pass
 
+                    article_info[Row_Name.START_PAGE] = start_p
+                    article_info[Row_Name.END_PAGE] = end_p
+                    article_info[Row_Name.PAGE_TOTAL] = p_t
                 elif li.get_text().find("Published Online:") != -1:
                     [s.extract() for s in li.find("span")]
                     self.set_possible_none_item(article_info, Row_Name.STRING_PUB_DATE, li)
@@ -224,10 +250,10 @@ class article(common_article):
             af = ""
             aa = ""
             em = "$$"
-            print(div_tag)
-            print("================", a["title"].strip())
+            # print(div_tag)
+            # print("================", a["title"].strip())
             for p in div_s.find_all("p"):
-                print(p)
+                # print(p)
                 [s.extract() for s in p.find_all("p")]
                 p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
 
@@ -235,7 +261,7 @@ class article(common_article):
                     co_string += p
                 elif p.find("E-mail Address:") != -1:
                     has_em = True
-                    print(p)
+                    # print(p)
                     if em.find("$$") != -1:
                         em = p.split(":")[1].strip()
                     else:
@@ -244,7 +270,7 @@ class article(common_article):
                         co_string += p
                 elif p != "":
                     af += p + ";"
-                    print("+++++++++++++++", af)
+                    # print("+++++++++++++++", af)
             em_string += em + "##"
             if af == "":
                 af_string += "$$##"
@@ -274,73 +300,84 @@ class article(common_article):
 
 
 if __name__ == '__main__':
+    cookie=" I2KBRCK=1; MAID=bTY2/0pIlThlENHcxBGyPQ==; _ga=GA1.2.2018801126.1543481100; gdprCookie=Cookies policy accepted; seerid=86715.61259763717; seerid=86715.61259763717; PathforaImpressions_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048980739; PathforaClosed_95ee3ae4ffcc3bcb7ff6ee6329a77114=2%7C1553048982823; __atuvc=40%7C9%2C11%7C10%2C4%7C11%2C5%7C12%2C3%7C13; __attag=%22lio%3Aly_unknown_email%2Clio%3Aly_frequent_user%2Clio%3Asmt_power%2Clio%3Aall%2Clio%3A95ee3ae4ffcc3bcb7ff6ee6329a77114_reach%2Clio%3Aaudhighlyengaged%2Clio%3Aaud_unknown_users%22%2Clio%3Aly_unknown_email%2Clio%3Aaud_unknown_users; _gid=GA1.2.1969530633.1553669761; SERVER=WZ6myaEXBLGexQVnui0xrg==; MACHINE_LAST_SEEN=2019-03-27T23%3A54%3A27.951-07%3A00; JSESSIONID=aaaT0kUlxcj7G7WTwxwMw; seerses=e; seerses=e; ly_segs=%7B%22ly_unknown_email%22%3A%22ly_unknown_email%22%2C%22ly_frequent_user%22%3A%22ly_frequent_user%22%2C%22smt_power%22%3A%22smt_power%22%2C%22all%22%3A%22all%22%2C%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%3A%2295ee3ae4ffcc3bcb7ff6ee6329a77114_reach%22%2C%22audhighlyengaged%22%3A%22audhighlyengaged%22%2C%22aud_unknown_users%22%3A%22aud_unknown_users%22%7D; cookiePolicy=iaccept; _gat__gaenor=1; PathforaPageView=191"
+    c={}
+    for a in cookie.split(";"):
+        a= a.split("=")
+        c[a[0]]=a[1]
+
+    print(c)
+
+
+
+    pass
     # job=jobs()
     # job.run_single_website("MaryAnn")
-
-    article_info={}
-    url="https://www.liebertpub.com/doi/10.1089/wound.2018.0824"
-
-    data_s = requests.get(url)
-    bs_c = BeautifulSoup(data_s.text, "html.parser")
-    an_string = ""
-    em_string = ""
-    af_string = ""
-    co_string = ""
-    ans={}
-
-    has_af = False
-    has_em = False
-    div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
-    # print(div_a)
-    for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
-                   + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
-        a = div_tag.find("a", href="#")
-        if a["title"].strip() in ans:
-            continue
-        else:
-            ans[a["title"].strip()]=1
-        an_string += a["title"].strip() + "##"
-        div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
-        [s.extract() for s in div_s.find("div", class_="bottom-info")]
-        af = ""
-        aa = ""
-        em = "$$"
-        print(div_tag)
-        print("================", a["title"].strip())
-        for p in div_s.find_all("p"):
-            print(p)
-            [s.extract() for s in p.find_all("p")]
-            p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
-
-            if p.lower().find("correspondence") != -1:
-                co_string += p
-            elif p.find("E-mail Address:") != -1:
-                has_em = True
-                print(p)
-                if em.find("$$") != -1:
-                    em = p.split(":")[1].strip()
-                else:
-                    em += ";" + p.split(":")[1].strip()
-                if p.find(em) == -1:
-                    co_string += p
-            elif p != "":
-                af += p + ";"
-                print("+++++++++++++++", af)
-        em_string += em + "##"
-        if af == "":
-            af_string += "$$##"
-        else:
-            af_string += af[:-1] + "##"
-            has_af = True
-
-    article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
-    if has_em:
-        article_info[Row_Name.EMAIL] = em_string[:-2]
-    if has_af:
-        article_info[Row_Name.AFFILIATION] = af_string[:-2]
-
-    article_info[Row_Name.CORRESPONDING] = co_string
-    print(article_info)
+    #
+    # article_info={}
+    # url="https://www.liebertpub.com/doi/10.1089/wound.2018.0824"
+    #
+    # data_s = requests.get(url)
+    # bs_c = BeautifulSoup(data_s.text, "html.parser")
+    # an_string = ""
+    # em_string = ""
+    # af_string = ""
+    # co_string = ""
+    # ans={}
+    #
+    # has_af = False
+    # has_em = False
+    # div_a = bs_c.find("div", class_="accordion-tabbed loa-accordion")
+    # # print(div_a)
+    # for div_tag in div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile accordion__closed"}) \
+    #                + div_a.find_all("div", {"class": "accordion-tabbed__tab-mobile"}):
+    #     a = div_tag.find("a", href="#")
+    #     if a["title"].strip() in ans:
+    #         continue
+    #     else:
+    #         ans[a["title"].strip()]=1
+    #     an_string += a["title"].strip() + "##"
+    #     div_s = div_tag.find("div", class_="author-info accordion-tabbed__content")
+    #     [s.extract() for s in div_s.find("div", class_="bottom-info")]
+    #     af = ""
+    #     aa = ""
+    #     em = "$$"
+    #     # print(div_tag)
+    #     # print("================", a["title"].strip())
+    #     for p in div_s.find_all("p"):
+    #         print(p)
+    #         [s.extract() for s in p.find_all("p")]
+    #         p = p.get_text().strip().replace("\n", " ").replace("\r", " ")
+    #
+    #         if p.lower().find("correspondence") != -1:
+    #             co_string += p
+    #         elif p.find("E-mail Address:") != -1:
+    #             has_em = True
+    #             print(p)
+    #             if em.find("$$") != -1:
+    #                 em = p.split(":")[1].strip()
+    #             else:
+    #                 em += ";" + p.split(":")[1].strip()
+    #             if p.find(em) == -1:
+    #                 co_string += p
+    #         elif p != "":
+    #             af += p + ";"
+    #             print("+++++++++++++++", af)
+    #     em_string += em + "##"
+    #     if af == "":
+    #         af_string += "$$##"
+    #     else:
+    #         af_string += af[:-1] + "##"
+    #         has_af = True
+    #
+    # article_info[Row_Name.AUTHOR_NAME] = an_string[:-2]
+    # if has_em:
+    #     article_info[Row_Name.EMAIL] = em_string[:-2]
+    # if has_af:
+    #     article_info[Row_Name.AFFILIATION] = af_string[:-2]
+    #
+    # article_info[Row_Name.CORRESPONDING] = co_string
+    # print(article_info)
 
 
 

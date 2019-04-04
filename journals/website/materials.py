@@ -12,7 +12,7 @@ from journals.website import aspbs
 class journals(common_journals):
 
     def get(self,website,journal,url):
-        # print("=============")
+        print("=============")
         journal_common_info=self.get_common(journal,url)
         journal_common_info[Row_Name.JOURNAL_TITLE] = journal
         journal_common_info[Row_Name.PUBLISHER]=website
@@ -27,19 +27,19 @@ class journals(common_journals):
             if not a["href"] in a_set:
                 a_set[a["href"]]=1
                 url_s="http://www.aspbs.com/"+a["href"]
-                # print(url_s)
+                print(url_s)
                 time.sleep(random.random() * 3)
                 data_s = requests.get(url_s)
                 bs_s = BeautifulSoup(data_s.text, "html.parser")
 
                 for table_s in bs_s.find_all("table"):
                     if table_s.find("table") == None:
-                        # print(table_s)
+                        print(table_s)
                         for tr in table_s.find_all("tr"):
                             tt = tr.find("td").get_text().replace("\n","").replace("\r","")
 
                             if tt.find("Volume") != -1 and tt.find("Number") != -1:
-                                # print(tt)
+                                print(tt)
                                 issue_info = dict(journal_common_info)
                                 volume = re.search("\d+", re.search("Vol.+\d+", tt).group()).group()
                                 no = re.search("\d+", re.search("Number.+\d+", tt).group()).group()
@@ -51,7 +51,7 @@ class journals(common_journals):
                                 issue_info[Row_Name.ISSUE]=no
                                 issue_info[Row_Name.TEMP_URL]=url_s
                                 issue_info[Row_Name.STRING_COVER_DATE] = cdate[1:-1]
-                                # print(issue_info)
+                                print(issue_info)
                                 if self.nm.is_increment(journal,issue_info[Row_Name.YEAR],issue_info[Row_Name.VOLUME],issue_info[Row_Name.ISSUE]):
                                     self.nm.save_journal_temp_data(journal,json.dumps(issue_info))
 
