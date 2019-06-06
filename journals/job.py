@@ -149,6 +149,11 @@ class jobs:
         spi=spider(None,None,False)
         for i in item[1].split(";"):
             strs=i.split("_")
+            if strs.__len__()>3:
+                a=""
+                for i in range(strs.__len__()-2):
+                    a+=strs[i+2]+"_"
+                strs[2]=a[:-1]
             if not strs[0] in pubs:
                 pubs[strs[0]]=1
             spi.run_journal(pyfile,strs[0],strs[1],strs[2])
@@ -156,6 +161,11 @@ class jobs:
         return pubs
 
 
+
+    def single_journal(self,publisher,name):
+        item=self.cofig.read_items("single")
+        self.run_single_journal(item[0])
+        write_data({publisher:1},name)
 
 
 
@@ -323,25 +333,25 @@ def test(s,*s1):
 if __name__ == '__main__':
     # pass
     # test(1,7)
-    website="MaryAnn"
+    # website="MaryAnn"
     # journal = "Journal of Endourology"
     # url = "https://www.liebertpub.com/loi/end"
     # run_journal(website, website, journal, url)
 
-    file=open("1",encoding="utf-8")
-    for line in file.readlines():
-        line=line.split("_")
-        journal = line[0]
-        url = line[1].replace("\n","")
-        print(url)
-        print("========")
-        run_journal(website, website, journal, url)
+    # file=open("1",encoding="utf-8")
+    # for line in file.readlines():
+    #     line=line.split("_")
+    #     journal = line[0]
+    #     url = line[1].replace("\n","")
+    #     print(url)
+    #     print("========")
+    #     run_journal(website, website, journal, url)
 
 
 
-    # job=jobs()
-    # job.run()
-    # job.run_single_website("MaryAnn")
+    job=jobs()
+    # job.single_journal("Institute of Physics Publishing/Chinese Academy of Sciences","N-IPP")
+    job.single_journal("Bolyai Institute","zxD20160923093314187")
 
 
    # excel_rw.create_and_save_execel("aspbs")

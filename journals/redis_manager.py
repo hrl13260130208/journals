@@ -7,10 +7,11 @@ import json
 
 REDIS_IP="10.3.1.99"
 REDIS_PORT="6379"
-REDIS_DB="2" #MaryAnn
+# REDIS_DB="2" #MaryAnn
 # REDIS_DB="10" #aspbs
 # REDIS_DB="9" #aspbs test
-# REDIS_DB="11" #aspbs test
+REDIS_DB="11" #增量使用
+# REDIS_DB="7" #test
 
 
 
@@ -236,16 +237,17 @@ def delete_downloads():
     redis_.delete("article_error_massage_list")
 
 if __name__ == '__main__':
-    print(redis_.sismember("Journal of Caffeine and Adenosine Research_download_schedule_set","sdf"))
+    # print(redis_.sismember("Journal of Caffeine and Adenosine Research_download_schedule_set","sdf"))
     for key in redis_.keys("*"):
-        redis_.delete(key)
+        # redis_.delete(key)
         # print(key ,redis_.type(key))
         if redis_.type(key) == "string":
             print(key,redis_.get(key))
         elif redis_.type(key) == "set":
-            print(key," : ",redis_.scard(key)," : ",redis_.smembers(key))
+            print(key," : ",redis_.scard(key)," : ",)#redis_.smembers(key)
         elif redis_.type(key) =="list":
-            print(key ," : ",redis_.llen(key)," : ", redis_.lrange(key,0,100))
+            print(key ," : ",redis_.llen(key)," : ", )#redis_.lrange(key,0,100))
+        # redis_.delete(key)
     # delete_downloads()
     #
     #

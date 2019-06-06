@@ -1,6 +1,14 @@
 import logging
 from journals.redis_manager import name_manager
 import json
+import requests
+import PyPDF2
+import uuid
+import os
+import time
+
+
+
 
 
 logger=logging.getLogger("logger")
@@ -86,6 +94,8 @@ class common_journals:
 
 
 class common_article:
+    DOWNLOAD_DIR = "C:/pdfs/"
+
     def __init__(self):
         self.nm = name_manager()
         self.is_break="break"
@@ -111,11 +121,11 @@ class common_article:
     def save_data(self,ais,journal_temp):
         if ais != None:
             for info in ais:
-                print(info[Row_Name.PUBLISHER])
+                # print(info[Row_Name.PUBLISHER])
                 self.nm.save_article_data(info[Row_Name.PUBLISHER], json.dumps(info))
 
-            self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
-                                           journal_temp[Row_Name.ISSUE])
+            # self.nm.save_download_schedule(journal_temp[Row_Name.JOURNAL_TITLE], journal_temp[Row_Name.VOLUME],
+            #                                journal_temp[Row_Name.ISSUE])
 
 
     def do_run(self,journal_temp):
@@ -183,6 +193,82 @@ class common_article:
         :return:
         '''
         pass
+
+    def download_html(self,url,*dir_name):
+        logger.info("下载HTML,下载链接："+url)
+        if dir_name:
+            file_path = self.creat_filename(dir_name[0],"txt")
+        else:
+            date_time = time.strftime("%Y%m%d", time.localtime())
+            file_path = self.creat_filename(date_time,"txt")
+        try:
+            self.download(url, file_path)
+        except:
+            logger.error("HTML下载出错。", exc_info=True)
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return None
+        return file_path
+
+    def download_pdf(self,url,*dir_name):
+        '''
+        下载PDF，若下载的PDF出错则返回None
+        :param url:
+        :param dir_name: PDF文件夹名称
+        :return:
+        '''
+        logger.info("下载PDF,下载链接："+url)
+        if dir_name:
+            file_path=self.creat_filename(dir_name[0])
+        else:
+            date_time = time.strftime("%Y%m%d", time.localtime())
+            file_path=self.creat_filename(date_time)
+        try:
+            self.download(url,file_path)
+            self.checkpdf(file_path)
+        except:
+            logger.error("PDF下载出错。", exc_info=True)
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            return None
+        return file_path
+
+    def creat_filename(self,dir_name,*subfix):
+        if not os.path.exists(self.DOWNLOAD_DIR):
+            os.mkdir(self.DOWNLOAD_DIR)
+        if not os.path.exists(self.DOWNLOAD_DIR+dir_name):
+            os.mkdir(self.DOWNLOAD_DIR+dir_name)
+
+        uid=str(uuid.uuid1())
+        suid=''.join(uid.split('-'))
+        if subfix:
+            return self.DOWNLOAD_DIR+dir_name+"/"+suid+"."+subfix[0]
+        else:
+            return self.DOWNLOAD_DIR+dir_name+"/"+suid+".pdf"
+
+    def download(self,url, file):
+        header = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36"}
+        data = requests.get(url.strip(),headers=header, verify=False,timeout=30)
+        # print(data.text)
+        data.encoding = 'utf-8'
+        file = open(file, "wb+")
+        file.write(data.content)
+        file.close()
+
+
+
+    def checkpdf(self,file):
+        pdffile=open(file, "rb")
+        pdf = PyPDF2.PdfFileReader(pdffile,strict=False)
+        pages=pdf.getNumPages()
+        pdffile.close()
+        return pages
+
 
 
 class Row_Name:
